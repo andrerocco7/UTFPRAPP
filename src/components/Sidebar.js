@@ -8,6 +8,7 @@ const ADMIN_LINKS = [
   { href: "/treinos", label: "Treinos" },
   { href: "/competicoes", label: "Competições" },
   { href: "/escalacao", label: "Escalação" },
+  { href: "/arremessos", label: "Arremessos" },
   { href: "/jogadas", label: "Jogadas táticas" },
 ];
 

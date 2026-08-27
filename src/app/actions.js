@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { auth, signIn, signOut } from "@/auth";
 import { query } from "@/lib/db";
+import { SPOT_IDS } from "@/lib/spots";
 
 async function requireAdmin() {
   const session = await auth();
@@ -162,4 +163,55 @@ export async function deletePlay(playId) {
   await requireAdmin();
   await query("delete from plays where id = $1", [playId]);
   revalidatePath("/jogadas");
+}
+
+// ---------- treinos de arremesso ----------
+
+// Uma sessao por dia e categoria — reabrir a pagina no mesmo treino
+// continua lancando na mesma sessao em vez de criar outra.
+async function sessionDoDia(categoria) {
+  const { rows } = await query(
+    `insert into shooting_sessions (data, categoria)
+     values (current_date, $1)
+     on conflict (data, categoria) do update set categoria = excluded.categoria
+     returning id`,
+    [categoria]
+  );
+  return rows[0].id;
+}
+
+export async function addShootingSet(formData) {
+  await requireAdmin();
+
+  const personId = Number(formData.get("personId"));
+  const categoria = String(formData.get("categoria") || "");
+  const spot = String(formData.get("spot") || "");
+  const tentativas = Number(formData.get("tentativas"));
+  const acertos = Number(formData.get("acertos"));
+
+  if (!SPOT_IDS.includes(spot)) throw new Error("Ponto da quadra invalido.");
+  if (!["F", "M"].includes(categoria)) throw new Error("Categoria invalida.");
+  if (!Number.isInteger(tentativas) || tentativas < 1 || tentativas > 200) {
+    throw new Error("Numero de tentativas invalido.");
+  }
+  if (!Number.isInteger(acertos) || acertos < 0 || acertos > tentativas) {
+    throw new Error("Numero de acertos invalido.");
+  }
+
+  const sessionId = await sessionDoDia(categoria);
+  await query(
+    `insert into shooting_sets (session_id, person_id, spot, tentativas, acertos)
+     values ($1, $2, $3, $4, $5)`,
+    [sessionId, personId, spot, tentativas, acertos]
+  );
+
+  revalidatePath("/arremessos");
+  revalidatePath("/minha-ficha");
+}
+
+export async function deleteShootingSet(setId) {
+  await requireAdmin();
+  await query("delete from shooting_sets where id = $1", [setId]);
+  revalidatePath("/arremessos");
+  revalidatePath("/minha-ficha");
 }

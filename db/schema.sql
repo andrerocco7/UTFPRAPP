@@ -81,3 +81,28 @@ insert into trainings (categoria, dia, rotina) values
   ('F', 'segunda', ''), ('F', 'quarta', ''), ('F', 'sabado', ''),
   ('M', 'segunda', ''), ('M', 'sexta', '')
 on conflict (categoria, dia) do nothing;
+
+-- Treinos de arremesso: cada linha de shooting_sets e uma serie lancada
+-- (ex: "7 de 10 do lance livre"), para permitir ver evolucao dentro do
+-- treino e ao longo das semanas.
+create table if not exists shooting_sessions (
+  id serial primary key,
+  data date not null default current_date,
+  categoria text not null check (categoria in ('F', 'M')),
+  criado_em timestamptz not null default now(),
+  unique (data, categoria)
+);
+
+create table if not exists shooting_sets (
+  id serial primary key,
+  session_id integer not null references shooting_sessions(id) on delete cascade,
+  person_id integer not null references people(id) on delete cascade,
+  spot text not null,
+  tentativas integer not null check (tentativas > 0),
+  acertos integer not null check (acertos >= 0),
+  criado_em timestamptz not null default now(),
+  constraint acertos_ate_tentativas check (acertos <= tentativas)
+);
+
+create index if not exists idx_shooting_sets_person on shooting_sets (person_id);
+create index if not exists idx_shooting_sets_session on shooting_sets (session_id);
