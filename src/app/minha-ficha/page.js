@@ -74,11 +74,11 @@ export default async function MyProfilePage() {
           </div>
         )}
         {squadRows.map((s) => (
-          <div key={s.id} className="card p-3 flex items-center justify-between">
-            <div className="text-[13px]">
+          <div key={s.id} className="card p-3 flex items-center justify-between gap-3">
+            <div className="text-[13px] min-w-0">
               {s.competicao} — {s.ano}
             </div>
-            <span className={`tag ${s.convocado ? "tag-ativo" : "tag-afastado"}`}>
+            <span className={`shrink-0 tag ${s.convocado ? "tag-ativo" : "tag-afastado"}`}>
               {s.convocado ? "Convocada(o)" : "Não convocada(o)"}
             </span>
           </div>

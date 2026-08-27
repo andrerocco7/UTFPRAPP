@@ -80,16 +80,18 @@ function AthleteGroup({ title, categoria, list }) {
           <Link
             key={a.id}
             href={`/atletas/${a.id}`}
-            className="card p-4 flex items-center justify-between hover:border-[var(--accent)] transition-colors"
+            className="card p-4 flex items-center justify-between gap-3 hover:border-[var(--accent)] transition-colors"
           >
-            <div>
+            <div className="min-w-0">
               <div className="font-display font-semibold text-[14.5px]">{a.nome}</div>
               <div className="text-[12px] text-[var(--text-muted)]">
                 {a.curso || "Curso não informado"}
                 {a.posicao ? ` · ${a.posicao}` : ""}
               </div>
             </div>
-            <StatusTag status={a.status} />
+            <span className="shrink-0">
+              <StatusTag status={a.status} />
+            </span>
           </Link>
         ))}
       </div>

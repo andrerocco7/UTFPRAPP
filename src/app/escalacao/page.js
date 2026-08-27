@@ -69,7 +69,7 @@ export default async function SquadsPage() {
         const boundDelete = deleteSquad.bind(null, sq.id);
         return (
           <div key={sq.id} className="card p-5 mb-4">
-            <div className="flex items-center justify-between mb-3">
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
               <h3 className="font-display font-semibold text-[16px]">
                 {compById[sq.competition_id]} — <CategoryTag categoria={sq.categoria} /> {sq.ano}
               </h3>

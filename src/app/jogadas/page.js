@@ -66,15 +66,15 @@ export default async function PlaysPage() {
           const boundDelete = deletePlay.bind(null, p.id);
           return (
             <div key={p.id} className="card p-4">
-              <div className="flex items-center justify-between">
-                <div>
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
                   <span className={`tag ${CATEGORY_CLASS[p.categoria]} mr-2`}>
                     {CATEGORY_LABEL[p.categoria]}
                   </span>
                   <span className="font-display font-semibold text-[14.5px]">{p.nome}</span>
                 </div>
                 {isAdmin && (
-                  <form action={boundDelete}>
+                  <form action={boundDelete} className="shrink-0">
                     <button type="submit" className="text-[var(--text-muted)] hover:text-[var(--danger)]" title="Remover">
                       ✕
                     </button>
