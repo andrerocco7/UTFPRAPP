@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120" role="img" aria-label="Emblema Basquete UTFPR">
+  <circle cx="60" cy="60" r="58" fill="#0d0d0e" stroke="#ffcc00" stroke-width="3"/>
+  <circle cx="60" cy="60" r="46" fill="none" stroke="#ffcc00" stroke-width="1.5" opacity="0.55"/>
+  <g stroke="#ffcc00" stroke-width="2" fill="none" opacity="0.9">
+    <path d="M14 60 H106" />
+    <path d="M60 14 V106" />
+    <path d="M22 22 C44 40, 44 80, 22 98" />
+    <path d="M98 22 C76 40, 76 80, 98 98" />
+  </g>
+  <text x="60" y="55" text-anchor="middle" font-family="Oswald, Arial Narrow, sans-serif" font-weight="700" font-size="22" fill="#ffcc00" letter-spacing="1">UTFPR</text>
+  <text x="60" y="75" text-anchor="middle" font-family="Oswald, Arial Narrow, sans-serif" font-weight="600" font-size="11" fill="#f6f4ec" letter-spacing="2">BASQUETE</text>
+</svg>
