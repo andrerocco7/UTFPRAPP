@@ -20,6 +20,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
   providers: [
     Google({
+      // O Auth.js só infere credenciais das variáveis AUTH_GOOGLE_ID/AUTH_GOOGLE_SECRET.
+      // Passamos explicitamente para usar os nomes documentados no .env.example.
+      clientId: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
       // Restringe o consentimento do Google à conta institucional, quando configurado.
       authorization: {
         params: allowedDomains.length ? { hd: allowedDomains[0] } : {},
