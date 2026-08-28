@@ -6,6 +6,12 @@ import { addShootingSet, deleteShootingSet } from "@/app/actions";
 
 const R = 92;
 
+// O time tem tres Arthur, dois Joao e dois Nicolas — so o primeiro nome
+// nao distingue quem e quem na lista de series.
+function nomeCurto(nome) {
+  return nome.split(" ").slice(0, 2).join(" ");
+}
+
 function pct(m, a) {
   return a ? Math.round((m / a) * 100) : null;
 }
@@ -282,7 +288,7 @@ export default function CourtChart({ atletas, sets }) {
                   className="flex items-center gap-2 px-3 py-2 border-t border-[var(--border)] text-[13px]"
                 >
                   <span className="flex-1 min-w-0 truncate">
-                    {s.nome.split(" ")[0]} · {spotLabel(s.spot)}
+                    {nomeCurto(s.nome)} · {spotLabel(s.spot)}
                   </span>
                   <span className="font-semibold tabular-nums" style={{ color: cor }}>
                     {s.acertos}/{s.tentativas}
