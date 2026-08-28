@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export const metadata = {
   title: "Política de Privacidade — Basquete UTFPR",
   description: "Quais dados o painel do basquete da UTFPR guarda, por quê e quem tem acesso.",
@@ -126,9 +128,9 @@ export default function PrivacyPage() {
       </Section>
 
       <div className="mt-10 pt-6 border-t border-[var(--border)]">
-        <a href="/" className="text-[13px] text-[var(--text-muted)] hover:text-[var(--accent)]">
+        <Link href="/" className="text-[13px] text-[var(--text-muted)] hover:text-[var(--accent)]">
           ← Voltar ao painel
-        </a>
+        </Link>
       </div>
     </main>
   );
