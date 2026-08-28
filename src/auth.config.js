@@ -11,8 +11,12 @@ export const authConfig = {
   callbacks: {
     authorized({ auth, request: { nextUrl } }) {
       const isLoggedIn = !!auth?.user;
+      // A politica de privacidade precisa abrir sem login: o Google exige uma
+      // URL publica para liberar o app fora do modo de teste.
       const isPublicPath =
-        nextUrl.pathname === "/login" || nextUrl.pathname.startsWith("/api/auth");
+        nextUrl.pathname === "/login" ||
+        nextUrl.pathname === "/privacidade" ||
+        nextUrl.pathname.startsWith("/api/auth");
       if (isPublicPath) return true;
       return isLoggedIn;
     },
