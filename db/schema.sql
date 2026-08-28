@@ -106,3 +106,40 @@ create table if not exists shooting_sets (
 
 create index if not exists idx_shooting_sets_person on shooting_sets (person_id);
 create index if not exists idx_shooting_sets_session on shooting_sets (session_id);
+
+-- Papel de coordenador: organiza o financeiro da propria equipe.
+-- O tecnico (admin) enxerga as duas.
+alter table people drop constraint if exists people_role_check;
+alter table people add constraint people_role_check
+  check (role in ('admin', 'coordinator', 'athlete'));
+
+-- Financeiro. Valores sempre em centavos (integer) — nunca float, para nao
+-- acumular erro de arredondamento em soma de dinheiro.
+create table if not exists finance_charges (
+  id serial primary key,
+  titulo text not null,
+  categoria text not null check (categoria in ('F', 'M', 'ambos')),
+  valor_centavos integer not null check (valor_centavos > 0),
+  vencimento date,
+  criado_em timestamptz not null default now()
+);
+
+create table if not exists finance_payments (
+  charge_id integer not null references finance_charges(id) on delete cascade,
+  person_id integer not null references people(id) on delete cascade,
+  pago_em date not null default current_date,
+  primary key (charge_id, person_id)
+);
+
+create table if not exists finance_expenses (
+  id serial primary key,
+  descricao text not null,
+  categoria text not null check (categoria in ('F', 'M', 'ambos')),
+  tipo text not null default 'outro'
+    check (tipo in ('inscricao', 'transporte', 'arbitragem', 'material', 'alimentacao', 'outro')),
+  valor_centavos integer not null check (valor_centavos > 0),
+  data date not null default current_date,
+  criado_em timestamptz not null default now()
+);
+
+create index if not exists idx_finance_payments_charge on finance_payments (charge_id);

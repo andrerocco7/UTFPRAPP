@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { auth, signIn, signOut } from "@/auth";
 import { query } from "@/lib/db";
 import { SPOT_IDS } from "@/lib/spots";
+import { parseBRLToCents } from "@/lib/money";
 
 async function requireAdmin() {
   const session = await auth();
@@ -214,4 +215,95 @@ export async function deleteShootingSet(setId) {
   await query("delete from shooting_sets where id = $1", [setId]);
   revalidatePath("/arremessos");
   revalidatePath("/minha-ficha");
+}
+
+// ---------- financeiro ----------
+
+async function requireFinance() {
+  const session = await auth();
+  const role = session?.user?.role;
+  if (!session?.user || !["admin", "coordinator"].includes(role)) {
+    throw new Error("Ação não autorizada.");
+  }
+  return session.user;
+}
+
+// Coordenador so mexe na propria equipe; o tecnico mexe nas duas.
+function checaEscopo(user, categoria) {
+  if (user.role === "admin") return;
+  if (categoria !== user.categoria) {
+    throw new Error("Fora do escopo da sua equipe.");
+  }
+}
+
+export async function addCharge(formData) {
+  const user = await requireFinance();
+
+  const titulo = String(formData.get("titulo") || "").trim();
+  const categoria = String(formData.get("categoria") || "");
+  const centavos = parseBRLToCents(formData.get("valor"));
+  const vencimento = String(formData.get("vencimento") || "").trim() || null;
+
+  if (!titulo) throw new Error("Descreva a cobrança.");
+  if (!["F", "M", "ambos"].includes(categoria)) throw new Error("Equipe inválida.");
+  if (!centavos) throw new Error("Valor inválido.");
+  checaEscopo(user, categoria);
+
+  await query(
+    `insert into finance_charges (titulo, categoria, valor_centavos, vencimento)
+     values ($1, $2, $3, $4)`,
+    [titulo, categoria, centavos, vencimento]
+  );
+  revalidatePath("/financeiro");
+}
+
+export async function deleteCharge(chargeId) {
+  await requireFinance();
+  await query("delete from finance_charges where id = $1", [chargeId]);
+  revalidatePath("/financeiro");
+}
+
+export async function togglePayment(chargeId, personId, pago) {
+  await requireFinance();
+  if (pago) {
+    await query(
+      `insert into finance_payments (charge_id, person_id)
+       values ($1, $2) on conflict do nothing`,
+      [chargeId, personId]
+    );
+  } else {
+    await query(
+      "delete from finance_payments where charge_id = $1 and person_id = $2",
+      [chargeId, personId]
+    );
+  }
+  revalidatePath("/financeiro");
+}
+
+export async function addExpense(formData) {
+  const user = await requireFinance();
+
+  const descricao = String(formData.get("descricao") || "").trim();
+  const categoria = String(formData.get("categoria") || "");
+  const tipo = String(formData.get("tipo") || "outro");
+  const centavos = parseBRLToCents(formData.get("valor"));
+  const data = String(formData.get("data") || "").trim() || null;
+
+  if (!descricao) throw new Error("Descreva o gasto.");
+  if (!["F", "M", "ambos"].includes(categoria)) throw new Error("Equipe inválida.");
+  if (!centavos) throw new Error("Valor inválido.");
+  checaEscopo(user, categoria);
+
+  await query(
+    `insert into finance_expenses (descricao, categoria, tipo, valor_centavos, data)
+     values ($1, $2, $3, $4, coalesce($5::date, current_date))`,
+    [descricao, categoria, tipo, centavos, data]
+  );
+  revalidatePath("/financeiro");
+}
+
+export async function deleteExpense(expenseId) {
+  await requireFinance();
+  await query("delete from finance_expenses where id = $1", [expenseId]);
+  revalidatePath("/financeiro");
 }

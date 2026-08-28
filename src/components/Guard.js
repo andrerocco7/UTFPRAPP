@@ -13,3 +13,12 @@ export async function requireSessionPage() {
   if (!session?.user) redirect("/login");
   return session.user;
 }
+
+// Financeiro: tecnico ve as duas equipes; coordenador so a propria.
+// Hoje ninguem tem papel de coordenador, entao a pagina e so do tecnico.
+export async function requireFinancePage() {
+  const session = await auth();
+  if (!session?.user) redirect("/login");
+  if (!["admin", "coordinator"].includes(session.user.role)) redirect("/");
+  return session.user;
+}

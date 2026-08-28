@@ -9,6 +9,15 @@ const ADMIN_LINKS = [
   { href: "/competicoes", label: "Competições" },
   { href: "/escalacao", label: "Escalação" },
   { href: "/arremessos", label: "Arremessos" },
+  { href: "/financeiro", label: "Financeiro" },
+  { href: "/jogadas", label: "Jogadas táticas" },
+];
+
+const COORDINATOR_LINKS = [
+  { href: "/", label: "Visão geral" },
+  { href: "/financeiro", label: "Financeiro" },
+  { href: "/treinos", label: "Treinos" },
+  { href: "/competicoes", label: "Competições" },
   { href: "/jogadas", label: "Jogadas táticas" },
 ];
 
@@ -21,8 +30,18 @@ const ATHLETE_LINKS = [
 ];
 
 export default function Sidebar({ user }) {
-  const links = user.role === "admin" ? ADMIN_LINKS : ATHLETE_LINKS;
-  const papel = user.role === "admin" ? "Painel do técnico" : "Área do atleta";
+  const links =
+    user.role === "admin"
+      ? ADMIN_LINKS
+      : user.role === "coordinator"
+        ? COORDINATOR_LINKS
+        : ATHLETE_LINKS;
+  const papel =
+    user.role === "admin"
+      ? "Painel do técnico"
+      : user.role === "coordinator"
+        ? "Coordenação"
+        : "Área do atleta";
 
   return (
     // No celular vira uma barra no topo; a partir de md volta a ser coluna lateral fixa.
