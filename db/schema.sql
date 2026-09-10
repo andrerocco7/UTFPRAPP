@@ -9,6 +9,9 @@ create table if not exists people (
   curso text default '',
   posicao text default '',
   status text not null default 'ativo' check (status in ('ativo', 'observacao', 'lesionado', 'afastado')),
+  -- Coordenacao nao e um papel: e uma atleta que tambem organiza o financeiro
+  -- da propria equipe. Ela continua jogando, escalando e treinando normalmente.
+  coordena boolean not null default false,
   criado_em timestamptz not null default now()
 );
 
@@ -107,11 +110,15 @@ create table if not exists shooting_sets (
 create index if not exists idx_shooting_sets_person on shooting_sets (person_id);
 create index if not exists idx_shooting_sets_session on shooting_sets (session_id);
 
--- Papel de coordenador: organiza o financeiro da propria equipe.
--- O tecnico (admin) enxerga as duas.
+-- Coordenacao do financeiro: flag numa atleta ja cadastrada, nao um papel.
+-- A atleta marcada enxerga o Financeiro so da propria equipe (coluna categoria);
+-- o tecnico (admin) enxerga as duas. Migra qualquer 'coordinator' antigo de volta
+-- para 'athlete' com a flag ligada.
+alter table people add column if not exists coordena boolean not null default false;
+update people set coordena = true, role = 'athlete' where role = 'coordinator';
 alter table people drop constraint if exists people_role_check;
 alter table people add constraint people_role_check
-  check (role in ('admin', 'coordinator', 'athlete'));
+  check (role in ('admin', 'athlete'));
 
 -- Financeiro. Valores sempre em centavos (integer) — nunca float, para nao
 -- acumular erro de arredondamento em soma de dinheiro.

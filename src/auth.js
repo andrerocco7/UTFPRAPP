@@ -10,7 +10,7 @@ const allowedDomains = (process.env.ALLOWED_EMAIL_DOMAINS || "")
 
 async function findPersonByEmail(email) {
   const { rows } = await query(
-    "select id, nome, email, role, categoria from people where lower(email) = $1",
+    "select id, nome, email, role, categoria, coordena from people where lower(email) = $1",
     [email.toLowerCase()]
   );
   return rows[0] || null;
@@ -55,6 +55,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           token.personId = person.id;
           token.role = person.role;
           token.categoria = person.categoria;
+          token.coordena = person.coordena;
           token.nome = person.nome;
         }
       }
@@ -65,6 +66,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         session.user.personId = token.personId;
         session.user.role = token.role;
         session.user.categoria = token.categoria;
+        session.user.coordena = token.coordena || false;
         session.user.nome = token.nome || session.user.name;
       }
       return session;

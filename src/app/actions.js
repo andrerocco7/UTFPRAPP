@@ -59,27 +59,27 @@ export async function deleteAthlete(personId) {
   revalidatePath("/escalacao");
 }
 
-// ---------- coordenadores ----------
+// ---------- coordenação do financeiro ----------
+// Coordenar não é um cadastro à parte: é ligar uma flag numa atleta que já
+// existe. Ela continua jogando; só passa a enxergar o Financeiro da equipe dela.
 export async function addCoordinator(formData) {
   await requireAdmin();
-  const nome = String(formData.get("nome") || "").trim();
-  const email = String(formData.get("email") || "").trim().toLowerCase();
-  const categoria = formData.get("categoria");
-  if (!nome || !email) throw new Error("Nome e e-mail são obrigatórios.");
-  if (!["F", "M"].includes(categoria)) throw new Error("Escolha a equipe do coordenador.");
+  const personId = Number(formData.get("personId"));
+  if (!personId) throw new Error("Escolha uma atleta para a coordenação.");
 
-  await query(
-    `insert into people (nome, email, role, categoria)
-     values ($1, $2, 'coordinator', $3)`,
-    [nome, email, categoria]
+  const { rowCount } = await query(
+    "update people set coordena = true where id = $1 and role = 'athlete' and categoria is not null",
+    [personId]
   );
+  if (!rowCount) throw new Error("Atleta não encontrada ou sem equipe definida.");
   revalidatePath("/atletas");
   revalidatePath("/financeiro");
 }
 
-export async function deleteCoordinator(personId) {
+export async function removeCoordinator(personId) {
   await requireAdmin();
-  await query("delete from people where id = $1 and role = 'coordinator'", [personId]);
+  // Só tira o acesso ao financeiro — a atleta segue cadastrada normalmente.
+  await query("update people set coordena = false where id = $1", [personId]);
   revalidatePath("/atletas");
   revalidatePath("/financeiro");
 }
@@ -246,11 +246,11 @@ export async function deleteShootingSet(setId) {
 
 async function requireFinance() {
   const session = await auth();
-  const role = session?.user?.role;
-  if (!session?.user || !["admin", "coordinator"].includes(role)) {
+  const user = session?.user;
+  if (!user || (user.role !== "admin" && !user.coordena)) {
     throw new Error("Ação não autorizada.");
   }
-  return session.user;
+  return user;
 }
 
 // Coordenador so mexe na propria equipe; o tecnico mexe nas duas.

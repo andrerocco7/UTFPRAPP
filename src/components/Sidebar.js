@@ -13,14 +13,6 @@ const ADMIN_LINKS = [
   { href: "/jogadas", label: "Jogadas táticas" },
 ];
 
-const COORDINATOR_LINKS = [
-  { href: "/", label: "Visão geral" },
-  { href: "/financeiro", label: "Financeiro" },
-  { href: "/treinos", label: "Treinos" },
-  { href: "/competicoes", label: "Competições" },
-  { href: "/jogadas", label: "Jogadas táticas" },
-];
-
 const ATHLETE_LINKS = [
   { href: "/", label: "Visão geral" },
   { href: "/minha-ficha", label: "Minha ficha" },
@@ -29,18 +21,26 @@ const ATHLETE_LINKS = [
   { href: "/jogadas", label: "Jogadas táticas" },
 ];
 
+// Atleta que também coordena o financeiro: mesmos links de atleta + Financeiro.
+const COORDINATOR_LINKS = [
+  ATHLETE_LINKS[0],
+  ATHLETE_LINKS[1],
+  { href: "/financeiro", label: "Financeiro" },
+  ...ATHLETE_LINKS.slice(2),
+];
+
 export default function Sidebar({ user }) {
   const links =
     user.role === "admin"
       ? ADMIN_LINKS
-      : user.role === "coordinator"
+      : user.coordena
         ? COORDINATOR_LINKS
         : ATHLETE_LINKS;
   const papel =
     user.role === "admin"
       ? "Painel do técnico"
-      : user.role === "coordinator"
-        ? "Coordenação"
+      : user.coordena
+        ? "Atleta · coordenação"
         : "Área do atleta";
 
   return (

@@ -14,12 +14,12 @@ export async function requireSessionPage() {
   return session.user;
 }
 
-// Financeiro: tecnico ve as duas equipes; coordenador so a propria equipe
-// (definida pela coluna categoria em people). Coordenadores sao cadastrados
-// pelo tecnico na aba Atletas.
+// Financeiro: tecnico (admin) ve as duas equipes; uma atleta com coordena=true
+// ve so a propria equipe (coluna categoria em people). A flag e ligada pelo
+// tecnico na aba Atletas.
 export async function requireFinancePage() {
   const session = await auth();
   if (!session?.user) redirect("/login");
-  if (!["admin", "coordinator"].includes(session.user.role)) redirect("/");
+  if (session.user.role !== "admin" && !session.user.coordena) redirect("/");
   return session.user;
 }
