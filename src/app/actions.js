@@ -59,6 +59,31 @@ export async function deleteAthlete(personId) {
   revalidatePath("/escalacao");
 }
 
+// ---------- coordenadores ----------
+export async function addCoordinator(formData) {
+  await requireAdmin();
+  const nome = String(formData.get("nome") || "").trim();
+  const email = String(formData.get("email") || "").trim().toLowerCase();
+  const categoria = formData.get("categoria");
+  if (!nome || !email) throw new Error("Nome e e-mail são obrigatórios.");
+  if (!["F", "M"].includes(categoria)) throw new Error("Escolha a equipe do coordenador.");
+
+  await query(
+    `insert into people (nome, email, role, categoria)
+     values ($1, $2, 'coordinator', $3)`,
+    [nome, email, categoria]
+  );
+  revalidatePath("/atletas");
+  revalidatePath("/financeiro");
+}
+
+export async function deleteCoordinator(personId) {
+  await requireAdmin();
+  await query("delete from people where id = $1 and role = 'coordinator'", [personId]);
+  revalidatePath("/atletas");
+  revalidatePath("/financeiro");
+}
+
 export async function addNote(personId, formData) {
   await requireAdmin();
   const texto = String(formData.get("texto") || "").trim();

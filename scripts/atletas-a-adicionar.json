@@ -1,0 +1,92 @@
+[
+  {
+    "nome": "Marina Secconi Garcia",
+    "email": "marinasecconi@alunos.utfpr.edu.br",
+    "categoria": "F",
+    "curso": "Arquitetura e Urbanismo"
+  },
+  {
+    "nome": "Julia Vila Silva",
+    "email": "juliavilasilva@alunos.utfpr.edu.br",
+    "categoria": "F",
+    "curso": "Educação Física"
+  },
+  {
+    "nome": "Marcyellen Vargas Vasques",
+    "email": "mvasques@alunos.utfpr.edu.br",
+    "categoria": "F",
+    "curso": "Engenharia de Controle e Automação"
+  },
+  {
+    "nome": "Nice Lima de Oliveira",
+    "email": "nice@alunos.utfpr.edu.br",
+    "categoria": "F",
+    "curso": "Engenharia Ambiental e Sanitária"
+  },
+  {
+    "nome": "Bianca Defacio Maccarini",
+    "email": "biancamaccarini@alunos.utfpr.edu.br",
+    "categoria": "F",
+    "curso": "Arquitetura e Urbanismo"
+  },
+  {
+    "nome": "Rayani Marchette Goveia",
+    "email": "rayani@alunos.utfpr.edu.br",
+    "categoria": "F",
+    "curso": "Engenharia Mecânica"
+  },
+  {
+    "nome": "Ingrid Moreira de Almeida",
+    "email": "ialmeida.2019@alunos.utfpr.edu.br",
+    "categoria": "F",
+    "curso": "Design Gráfico"
+  },
+  {
+    "nome": "Lais Lisboa",
+    "email": "laislisboa@alunos.utfpr.edu.br",
+    "categoria": "F",
+    "curso": "Sistemas de Informação"
+  },
+  {
+    "nome": "Larissa Yukari Nouchi",
+    "email": "larissanouchi@alunos.utfpr.edu.br",
+    "categoria": "F",
+    "curso": "Design Bacharel"
+  },
+  {
+    "nome": "Isabel Ribinski Rosa",
+    "email": "isabelrosa@alunos.utfpr.edu.br",
+    "categoria": "F",
+    "curso": "Arquitetura e Urbanismo"
+  },
+  {
+    "nome": "Maria Helena Alves Pereira",
+    "email": "marper.2000@alunos.utfpr.edu.br",
+    "categoria": "F",
+    "curso": "Design Gráfico"
+  },
+  {
+    "nome": "Isabella Rodrigues Santa Bárbara Boger",
+    "email": "isabellaboger@alunos.utfpr.edu.br",
+    "categoria": "F",
+    "curso": "Letras Inglês"
+  },
+  {
+    "nome": "Luiza da Silveira Bernardi",
+    "email": "luizabernardi@alunos.utfpr.edu.br",
+    "categoria": "F",
+    "curso": "Engenharia Mecatrônica"
+  },
+  {
+    "nome": "Camily Cosme de Lima",
+    "email": "camilylima@alunos.utfpr.edu.br",
+    "categoria": "F",
+    "curso": "Engenharia Mecatrônica"
+  },
+  {
+    "nome": "Beatriz Borrelli Nyznyk",
+    "email": "nyznyk@alunos.utfpr.edu.br",
+    "categoria": "F",
+    "curso": "Engenharia de Computação"
+  }
+]

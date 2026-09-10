@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { requireAdminPage } from "@/components/Guard";
 import { query } from "@/lib/db";
-import { addAthlete } from "@/app/actions";
+import { addAthlete, addCoordinator, deleteCoordinator } from "@/app/actions";
 import { CategoryTag, StatusTag } from "@/components/Tag";
 
 export default async function AthletesPage() {
@@ -12,6 +12,10 @@ export default async function AthletesPage() {
   );
   const fem = athletes.filter((a) => a.categoria === "F");
   const masc = athletes.filter((a) => a.categoria === "M");
+
+  const { rows: coordinators } = await query(
+    "select id, nome, email, categoria from people where role = 'coordinator' order by categoria, nome"
+  );
 
   return (
     <div>
@@ -60,6 +64,75 @@ export default async function AthletesPage() {
 
       <AthleteGroup title="Feminino" categoria="F" list={fem} />
       <AthleteGroup title="Masculino" categoria="M" list={masc} />
+
+      <CoordinatorSection coordinators={coordinators} />
+    </div>
+  );
+}
+
+function CoordinatorSection({ coordinators }) {
+  return (
+    <div className="mb-8">
+      <h2 className="text-[15px] font-display font-semibold mb-3">Coordenadores</h2>
+      <p className="text-[12.5px] text-[var(--text-muted)] mb-3">
+        Coordenador enxerga o Financeiro só da própria equipe. O e-mail também precisa ser
+        institucional — é com ele que a coordenação faz login.
+      </p>
+
+      <div className="card p-5 mb-4">
+        <h3 className="font-semibold text-[13.5px] mb-3">Adicionar coordenador</h3>
+        <form action={addCoordinator} className="grid md:grid-cols-3 gap-3 items-end">
+          <Field label="Nome">
+            <input type="text" name="nome" required />
+          </Field>
+          <Field label="E-mail institucional">
+            <input type="email" name="email" required placeholder="nome@alunos.utfpr.edu.br" />
+          </Field>
+          <Field label="Equipe">
+            <select name="categoria" defaultValue="F">
+              <option value="F">Feminino</option>
+              <option value="M">Masculino</option>
+            </select>
+          </Field>
+          <div className="md:col-span-3">
+            <button type="submit" className="btn">
+              Adicionar coordenador
+            </button>
+          </div>
+        </form>
+      </div>
+
+      {!coordinators.length ? (
+        <div className="text-[13px] italic text-[var(--text-muted)]">
+          Nenhum coordenador cadastrado ainda.
+        </div>
+      ) : (
+        <div className="flex flex-col gap-2">
+          {coordinators.map((c) => {
+            const boundDelete = deleteCoordinator.bind(null, c.id);
+            return (
+              <div key={c.id} className="card p-4 flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="font-display font-semibold text-[14.5px]">{c.nome}</div>
+                  <div className="text-[12px] text-[var(--text-muted)] truncate">{c.email}</div>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <CategoryTag categoria={c.categoria} />
+                  <form action={boundDelete}>
+                    <button
+                      type="submit"
+                      title="Remover coordenador"
+                      className="text-[var(--text-muted)] hover:text-[var(--danger)] px-1"
+                    >
+                      ✕
+                    </button>
+                  </form>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

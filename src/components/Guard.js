@@ -14,8 +14,9 @@ export async function requireSessionPage() {
   return session.user;
 }
 
-// Financeiro: tecnico ve as duas equipes; coordenador so a propria.
-// Hoje ninguem tem papel de coordenador, entao a pagina e so do tecnico.
+// Financeiro: tecnico ve as duas equipes; coordenador so a propria equipe
+// (definida pela coluna categoria em people). Coordenadores sao cadastrados
+// pelo tecnico na aba Atletas.
 export async function requireFinancePage() {
   const session = await auth();
   if (!session?.user) redirect("/login");
