@@ -16,6 +16,12 @@ const isLocal =
 
 const globalForPg = globalThis;
 
+// Reaproveita o pool entre invocações da mesma instância serverless (Vercel).
+// Sem isso em produção, cada nova invocação criava um Pool novo (até 5
+// conexões) sem nunca fechar os anteriores — sob rajada (o Next pré-carrega
+// todos os links da barra lateral de uma vez), várias instâncias abrindo
+// pools em paralelo estouravam o limite de conexões do Neon e alguma
+// requisição aleatória (login, POST de treinos, etc.) caía com erro 500.
 export const pool =
   globalForPg._basquetePgPool ||
   new Pool({
@@ -24,9 +30,7 @@ export const pool =
     max: 5,
   });
 
-if (process.env.NODE_ENV !== "production") {
-  globalForPg._basquetePgPool = pool;
-}
+globalForPg._basquetePgPool = pool;
 
 export function query(text, params) {
   return pool.query(text, params);
