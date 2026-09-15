@@ -1,6 +1,11 @@
 import { requireSessionPage } from "@/components/Guard";
 import { query } from "@/lib/db";
-import { updateTraining, addTrainingLog, deleteTrainingLog } from "@/app/actions";
+import {
+  updateTraining,
+  addTrainingLog,
+  updateTrainingLog,
+  deleteTrainingLog,
+} from "@/app/actions";
 import VideoLink from "@/components/VideoLink";
 
 const DAY_LABEL = {
@@ -148,10 +153,13 @@ function TrainingLog({ categoria, logs, isAdmin }) {
       ) : (
         <div className="flex flex-col gap-2">
           {logs.map((l) => {
+            const boundUpdate = updateTrainingLog.bind(null, l.id);
             const boundDelete = deleteTrainingLog.bind(null, l.id);
-            return (
-              <div key={l.id} className="card p-3">
-                <div className="flex items-start justify-between gap-3">
+            const isoData = new Date(l.data).toLocaleDateString("sv-SE", { timeZone: "UTC" });
+
+            if (!isAdmin) {
+              return (
+                <div key={l.id} className="card p-3">
                   <div className="text-[11px] font-display font-semibold text-[var(--accent)] tabular-nums">
                     {new Date(l.data).toLocaleDateString("pt-BR", {
                       timeZone: "UTC",
@@ -160,20 +168,36 @@ function TrainingLog({ categoria, logs, isAdmin }) {
                       year: "numeric",
                     })}
                   </div>
-                  {isAdmin && (
-                    <form action={boundDelete}>
-                      <button
-                        type="submit"
-                        title="Remover registro"
-                        className="text-[var(--text-muted)] hover:text-[var(--danger)] px-1 text-[12px] leading-none"
-                      >
-                        ✕
-                      </button>
-                    </form>
-                  )}
+                  <div className="text-[13px] whitespace-pre-wrap mt-1">{l.texto}</div>
                 </div>
-                <div className="text-[13px] whitespace-pre-wrap mt-1">{l.texto}</div>
-              </div>
+              );
+            }
+
+            return (
+              <form key={l.id} action={boundUpdate} className="card p-3 flex flex-col gap-2">
+                <div className="flex items-center justify-between gap-3">
+                  <input
+                    type="date"
+                    name="data"
+                    defaultValue={isoData}
+                    className="text-[11px] tabular-nums"
+                  />
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button type="submit" className="btn btn-small">
+                      Salvar
+                    </button>
+                    <button
+                      type="submit"
+                      formAction={boundDelete}
+                      title="Remover registro"
+                      className="text-[var(--text-muted)] hover:text-[var(--danger)] px-1 text-[12px] leading-none"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                </div>
+                <textarea name="texto" defaultValue={l.texto} />
+              </form>
             );
           })}
         </div>

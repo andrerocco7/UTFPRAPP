@@ -125,6 +125,19 @@ export async function addTrainingLog(formData) {
   revalidatePath("/treinos");
 }
 
+export async function updateTrainingLog(logId, formData) {
+  await requireAdmin();
+  const data = String(formData.get("data") || "").trim();
+  const texto = String(formData.get("texto") || "").trim();
+  if (!texto) throw new Error("Escreva o que rolou no treino.");
+
+  await query(
+    "update training_logs set data = coalesce(nullif($1, '')::date, data), texto = $2 where id = $3",
+    [data, texto, logId]
+  );
+  revalidatePath("/treinos");
+}
+
 export async function deleteTrainingLog(logId) {
   await requireAdmin();
   await query("delete from training_logs where id = $1", [logId]);
