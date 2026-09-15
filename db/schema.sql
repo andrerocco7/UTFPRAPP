@@ -39,6 +39,19 @@ create table if not exists trainings (
   primary key (categoria, dia)
 );
 
+-- Diario de treinos: um registro por data de treino (nao por dia da semana),
+-- com o que rolou naquela sessao especifica. Visivel para as atletas da
+-- equipe, para dar continuidade quando alguem falta.
+create table if not exists training_logs (
+  id serial primary key,
+  categoria text not null check (categoria in ('F', 'M')),
+  data date not null default current_date,
+  texto text not null,
+  criado_em timestamptz not null default now()
+);
+
+create index if not exists idx_training_logs_categoria_data on training_logs (categoria, data desc);
+
 create table if not exists squads (
   id serial primary key,
   competition_id text not null references competitions(id),

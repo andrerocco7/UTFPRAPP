@@ -106,6 +106,31 @@ export async function updateTraining(categoria, dia, formData) {
   revalidatePath("/treinos");
 }
 
+// Diário de treinos: registro datado do que rolou numa sessão específica
+// (não confundir com a rotina padrão do dia da semana, acima). Fica visível
+// para as atletas da equipe, então quem faltou consegue se atualizar.
+export async function addTrainingLog(formData) {
+  await requireAdmin();
+  const categoria = formData.get("categoria");
+  const data = String(formData.get("data") || "").trim();
+  const texto = String(formData.get("texto") || "").trim();
+  if (!["F", "M"].includes(categoria)) throw new Error("Equipe inválida.");
+  if (!texto) throw new Error("Escreva o que rolou no treino.");
+
+  await query(
+    `insert into training_logs (categoria, data, texto)
+     values ($1, coalesce(nullif($2, '')::date, current_date), $3)`,
+    [categoria, data, texto]
+  );
+  revalidatePath("/treinos");
+}
+
+export async function deleteTrainingLog(logId) {
+  await requireAdmin();
+  await query("delete from training_logs where id = $1", [logId]);
+  revalidatePath("/treinos");
+}
+
 // ---------- competições ----------
 export async function updateCompetition(id, formData) {
   await requireAdmin();
