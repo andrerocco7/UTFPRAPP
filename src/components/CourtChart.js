@@ -30,6 +30,7 @@ export default function CourtChart({ atletas, sets }) {
   const [personId, setPersonId] = useState(null);
   const [spot, setSpot] = useState(null);
   const [serie, setSerie] = useState(10);
+  const [erro, setErro] = useState(null);
   const [pendente, startTransition] = useTransition();
 
   const lista = useMemo(
@@ -58,9 +59,10 @@ export default function CourtChart({ atletas, sets }) {
 
   // Cada toque em "quantos acertou" lança uma série nova — o círculo só mostra
   // a soma do dia, então essa lista deixa claro que a repetição não se perdeu.
+  // sets vem do mais recente pro mais antigo; invertemos para "série 1" ser a primeira.
   const seriesDoSpot = useMemo(() => {
     if (!atual || !spot) return [];
-    return sets.filter((s) => s.person_id === atual.id && s.spot === spot);
+    return sets.filter((s) => s.person_id === atual.id && s.spot === spot).reverse();
   }, [sets, atual, spot]);
 
   function registrar(acertos) {
@@ -71,7 +73,28 @@ export default function CourtChart({ atletas, sets }) {
     fd.set("spot", spot);
     fd.set("tentativas", String(serie));
     fd.set("acertos", String(acertos));
-    startTransition(() => addShootingSet(fd));
+    setErro(null);
+    // addShootingSet é chamado direto (sem <form>), então se ele rejeitar sem
+    // try/catch o erro fica silencioso: o botão trava em "pendente" e o toque
+    // seguinte parece não fazer nada, como se não desse pra repetir o ponto.
+    startTransition(async () => {
+      try {
+        await addShootingSet(fd);
+      } catch (e) {
+        setErro(e?.message || "Não deu pra registrar essa série — tenta de novo.");
+      }
+    });
+  }
+
+  function removerSerie(setId) {
+    setErro(null);
+    startTransition(async () => {
+      try {
+        await deleteShootingSet(setId);
+      } catch (e) {
+        setErro(e?.message || "Não deu pra remover essa série — tenta de novo.");
+      }
+    });
   }
 
   function proximoAtleta() {
@@ -200,6 +223,11 @@ export default function CourtChart({ atletas, sets }) {
       </div>
 
       {/* lançamento da série */}
+      {erro && (
+        <div className="card p-3 text-[13px] text-[var(--danger)] border-[var(--danger)]">
+          {erro}
+        </div>
+      )}
       <div className="card">
         {!spot ? (
           <div className="p-6 text-center text-[13px] text-[var(--text-muted)]">
@@ -239,7 +267,10 @@ export default function CourtChart({ atletas, sets }) {
               ))}
             </div>
 
-            <div className="text-[13px] text-[var(--text-muted)]">Quantos acertou?</div>
+            <div className="text-[13px] text-[var(--text-muted)]">
+              Quantos acertou?
+              {pendente && <span className="ml-2 text-[var(--accent)]">salvando…</span>}
+            </div>
             <div className="grid grid-cols-6 gap-1.5">
               {Array.from({ length: serie + 1 }, (_, i) => (
                 <button
@@ -274,7 +305,7 @@ export default function CourtChart({ atletas, sets }) {
                         type="button"
                         aria-label={`Remover série ${i + 1} deste ponto`}
                         disabled={pendente}
-                        onClick={() => startTransition(() => deleteShootingSet(s.id))}
+                        onClick={() => removerSerie(s.id)}
                         className="text-[var(--text-muted)] hover:text-[var(--danger)] disabled:opacity-40 px-0.5"
                       >
                         ✕
@@ -332,7 +363,7 @@ export default function CourtChart({ atletas, sets }) {
                   <button
                     type="button"
                     aria-label="Remover série"
-                    onClick={() => startTransition(() => deleteShootingSet(s.id))}
+                    onClick={() => removerSerie(s.id)}
                     className="text-[var(--text-muted)] hover:text-[var(--danger)] px-1"
                   >
                     ✕
