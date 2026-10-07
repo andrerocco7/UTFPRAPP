@@ -26,7 +26,9 @@ export default async function ShootingPage() {
     <div>
       <h1 className="text-2xl font-bold mb-1">Arremessos</h1>
       <p className="text-[13px] text-[var(--text-muted)] mb-6">
-        Escolha o atleta, toque no ponto e marque quantos ele acertou na série.
+        Escolha o atleta, toque no ponto e marque quantos ele acertou na série. Pode tocar no
+        mesmo ponto de novo quantas vezes quiser — cada toque soma uma série nova, não substitui
+        a anterior.
       </p>
       <CourtChart atletas={atletas} sets={sets} />
     </div>

@@ -56,6 +56,13 @@ export default function CourtChart({ atletas, sets }) {
   const totalM = SPOTS.reduce((n, s) => n + porSpot[s.id].m, 0);
   const totalA = SPOTS.reduce((n, s) => n + porSpot[s.id].a, 0);
 
+  // Cada toque em "quantos acertou" lança uma série nova — o círculo só mostra
+  // a soma do dia, então essa lista deixa claro que a repetição não se perdeu.
+  const seriesDoSpot = useMemo(() => {
+    if (!atual || !spot) return [];
+    return sets.filter((s) => s.person_id === atual.id && s.spot === spot);
+  }, [sets, atual, spot]);
+
   function registrar(acertos) {
     if (!atual || !spot) return;
     const fd = new FormData();
@@ -248,6 +255,35 @@ export default function CourtChart({ atletas, sets }) {
                 </button>
               ))}
             </div>
+
+            {seriesDoSpot.length > 0 && (
+              <div className="flex flex-col gap-1.5 pt-1 border-t border-[var(--border)]">
+                <div className="text-[11px] uppercase tracking-wide text-[var(--text-muted)] pt-2">
+                  {seriesDoSpot.length === 1
+                    ? "1 série lançada aqui hoje"
+                    : `${seriesDoSpot.length} séries lançadas aqui hoje`}
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {seriesDoSpot.map((s, i) => (
+                    <span
+                      key={s.id}
+                      className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border)] bg-[var(--bg-sunken)] pl-2.5 pr-1.5 py-1 text-[12.5px] tabular-nums"
+                    >
+                      série {i + 1}: {s.acertos}/{s.tentativas}
+                      <button
+                        type="button"
+                        aria-label={`Remover série ${i + 1} deste ponto`}
+                        disabled={pendente}
+                        onClick={() => startTransition(() => deleteShootingSet(s.id))}
+                        className="text-[var(--text-muted)] hover:text-[var(--danger)] disabled:opacity-40 px-0.5"
+                      >
+                        ✕
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
