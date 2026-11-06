@@ -1,3 +1,4 @@
+import { isCoach } from "@/lib/roles";
 import { requireSessionPage } from "@/components/Guard";
 import { query } from "@/lib/db";
 import { addPlay, deletePlay } from "@/app/actions";
@@ -8,7 +9,7 @@ const CATEGORY_CLASS = { F: "tag-fem", M: "tag-masc", ambos: "tag-ativo" };
 
 export default async function PlaysPage() {
   const user = await requireSessionPage();
-  const isAdmin = user.role === "admin";
+  const isAdmin = isCoach(user);
 
   const { rows: plays } = await query(
     "select id, nome, categoria, situacao, descricao, video_url from plays order by criado_em desc"

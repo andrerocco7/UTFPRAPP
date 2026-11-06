@@ -1,11 +1,11 @@
 import Link from "next/link";
-import { requireAdminPage } from "@/components/Guard";
+import { requireCoachPage } from "@/components/Guard";
 import { query } from "@/lib/db";
 import { addAthlete, addCoordinator, removeCoordinator } from "@/app/actions";
 import { CategoryTag, StatusTag } from "@/components/Tag";
 
 export default async function AthletesPage() {
-  await requireAdminPage();
+  const user = await requireCoachPage();
 
   const { rows: athletes } = await query(
     "select id, nome, email, categoria, curso, posicao, status, coordena from people where role = 'athlete' order by nome"
@@ -66,7 +66,10 @@ export default async function AthletesPage() {
       <AthleteGroup title="Feminino" categoria="F" list={fem} />
       <AthleteGroup title="Masculino" categoria="M" list={masc} />
 
-      <CoordinatorSection coordinators={coordinators} candidates={candidates} />
+      {/* Coordenação mexe no acesso ao Financeiro e mostra e-mails: só o técnico. */}
+      {user.role === "admin" && (
+        <CoordinatorSection coordinators={coordinators} candidates={candidates} />
+      )}
     </div>
   );
 }

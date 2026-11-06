@@ -12,7 +12,11 @@ const ADMIN_LINKS = [
   { href: "/ranking", label: "Ranking" },
   { href: "/financeiro", label: "Financeiro" },
   { href: "/jogadas", label: "Jogadas táticas" },
+  { href: "/acessos", label: "Acessos" },
 ];
+
+// Comissão técnica (link de acesso): telas de técnico, sem Financeiro e Acessos.
+const STAFF_LINKS = ADMIN_LINKS.filter((l) => l.href !== "/financeiro" && l.href !== "/acessos");
 
 const ATHLETE_LINKS = [
   { href: "/", label: "Visão geral" },
@@ -36,15 +40,19 @@ export default function Sidebar({ user }) {
   const links =
     user.role === "admin"
       ? ADMIN_LINKS
-      : user.coordena
-        ? COORDINATOR_LINKS
-        : ATHLETE_LINKS;
+      : user.role === "staff"
+        ? STAFF_LINKS
+        : user.coordena
+          ? COORDINATOR_LINKS
+          : ATHLETE_LINKS;
   const papel =
     user.role === "admin"
       ? "Painel do técnico"
-      : user.coordena
-        ? "Atleta · coordenação"
-        : "Área do atleta";
+      : user.role === "staff"
+        ? "Comissão técnica"
+        : user.coordena
+          ? "Atleta · coordenação"
+          : "Área do atleta";
 
   return (
     // No celular vira uma barra no topo; a partir de md volta a ser coluna lateral fixa.
@@ -97,7 +105,7 @@ export default function Sidebar({ user }) {
 
       <div className="hidden md:block mt-auto pt-4 border-t border-[var(--border)]">
         <div className="px-2 text-[12.5px] font-medium truncate">{user.nome || user.name}</div>
-        <div className="px-2 text-[11px] text-[var(--text-muted)] truncate mb-2">{user.email}</div>
+        <div className="px-2 text-[11px] text-[var(--text-muted)] truncate mb-2">{user.email || "acesso por link"}</div>
         <form action={signOutAction}>
           <button type="submit" className="btn btn-secondary btn-small w-full">
             Sair

@@ -1,6 +1,16 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
+import { isCoach } from "@/lib/roles";
 
+// Telas de técnico que a comissão técnica (staff) também usa.
+export async function requireCoachPage() {
+  const session = await auth();
+  if (!session?.user) redirect("/login");
+  if (!isCoach(session.user)) redirect("/");
+  return session.user;
+}
+
+// Só o técnico: dados sensíveis e gestão de acessos.
 export async function requireAdminPage() {
   const session = await auth();
   if (!session?.user) redirect("/login");

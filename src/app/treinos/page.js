@@ -1,3 +1,4 @@
+import { isCoach } from "@/lib/roles";
 import { requireSessionPage } from "@/components/Guard";
 import { query } from "@/lib/db";
 import {
@@ -18,7 +19,7 @@ const ORDER = { segunda: 0, quarta: 1, sexta: 2, sabado: 3 };
 
 export default async function TrainingPage() {
   const user = await requireSessionPage();
-  const isAdmin = user.role === "admin";
+  const isAdmin = isCoach(user);
 
   const { rows } = await query("select categoria, dia, rotina, video_url from trainings");
   const byCategoria = { F: [], M: [] };

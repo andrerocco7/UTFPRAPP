@@ -123,6 +123,19 @@ create table if not exists shooting_sets (
 create index if not exists idx_shooting_sets_person on shooting_sets (person_id);
 create index if not exists idx_shooting_sets_session on shooting_sets (session_id);
 
+-- Links de acesso da comissao tecnica (papel 'staff' em src/lib/roles.js):
+-- entra sem conta Google e age como tecnico, sem dados sensiveis. Guardamos
+-- so o hash sha256 do token — o link completo aparece uma vez, na criacao.
+create table if not exists access_links (
+  id serial primary key,
+  nome text not null,
+  token_hash text not null unique,
+  criado_em timestamptz not null default now(),
+  expira_em timestamptz not null,
+  revogado_em timestamptz,
+  ultimo_uso timestamptz
+);
+
 -- Exercicios de arremesso que o tecnico sugere para o time fazer. pontos
 -- guarda os ids de src/lib/spots.js que o exercicio trabalha.
 create table if not exists shooting_drills (

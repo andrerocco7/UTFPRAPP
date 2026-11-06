@@ -1,10 +1,10 @@
-import { requireAdminPage } from "@/components/Guard";
+import { requireCoachPage } from "@/components/Guard";
 import { query } from "@/lib/db";
 import { createSquad, deleteSquad, toggleSquadMember, setCutReason } from "@/app/actions";
 import { CategoryTag } from "@/components/Tag";
 
 export default async function SquadsPage() {
-  await requireAdminPage();
+  await requireCoachPage();
 
   const { rows: competitions } = await query("select id, nome from competitions order by id");
   const { rows: squads } = await query(

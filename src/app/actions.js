@@ -2,16 +2,27 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { AuthError } from "next-auth";
 import { auth, signIn, signOut } from "@/auth";
 import { query } from "@/lib/db";
 import { SPOT_IDS } from "@/lib/spots";
 import { parseBRLToCents } from "@/lib/money";
+import { isCoach } from "@/lib/roles";
+import { novoToken, hashToken } from "@/lib/accessLinks";
 
+// Só o técnico: coordenação do financeiro, notas individuais, links de acesso.
 async function requireAdmin() {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     throw new Error("Ação não autorizada.");
   }
+  return session.user;
+}
+
+// Técnico ou comissão técnica (staff): o dia a dia do time.
+async function requireCoach() {
+  const session = await auth();
+  if (!isCoach(session?.user)) throw new Error("Ação não autorizada.");
   return session.user;
 }
 
@@ -30,9 +41,50 @@ export async function signOutAction() {
   await signOut({ redirectTo: "/login" });
 }
 
+// ---------- links de acesso (comissão técnica) ----------
+const VALIDADES_DIAS = [7, 30, 90];
+
+// Assinatura de useActionState: devolve o link uma única vez — no banco fica
+// só o hash, então não dá para mostrar de novo depois.
+export async function createAccessLink(_prev, formData) {
+  await requireAdmin();
+  const nome = String(formData.get("nome") || "").trim();
+  const dias = Number(formData.get("dias"));
+  if (!nome) return { erro: "Diga para quem é o link." };
+  if (!VALIDADES_DIAS.includes(dias)) return { erro: "Validade inválida." };
+
+  const token = novoToken();
+  await query(
+    `insert into access_links (nome, token_hash, expira_em)
+     values ($1, $2, now() + make_interval(days => $3))`,
+    [nome, hashToken(token), dias]
+  );
+  revalidatePath("/acessos");
+  return { token, nome };
+}
+
+export async function revokeAccessLink(linkId) {
+  await requireAdmin();
+  await query("update access_links set revogado_em = now() where id = $1 and revogado_em is null", [
+    linkId,
+  ]);
+  revalidatePath("/acessos");
+}
+
+export async function entrarComLink(token) {
+  try {
+    await signIn("link", { token, redirectTo: "/" });
+  } catch (e) {
+    // signIn redireciona lançando um erro de controle do Next; só tratamos
+    // o caso de link inválido/revogado/expirado.
+    if (e instanceof AuthError) redirect(`/entrar/${encodeURIComponent(token)}?erro=1`);
+    throw e;
+  }
+}
+
 // ---------- atletas ----------
 export async function addAthlete(formData) {
-  await requireAdmin();
+  await requireCoach();
   const nome = String(formData.get("nome") || "").trim();
   const email = String(formData.get("email") || "").trim().toLowerCase();
   if (!nome || !email) throw new Error("Nome e e-mail institucional são obrigatórios.");
@@ -53,7 +105,7 @@ export async function addAthlete(formData) {
 }
 
 export async function deleteAthlete(personId) {
-  await requireAdmin();
+  await requireCoach();
   await query("delete from people where id = $1 and role = 'athlete'", [personId]);
   revalidatePath("/atletas");
   revalidatePath("/escalacao");
@@ -94,7 +146,7 @@ export async function addNote(personId, formData) {
 
 // ---------- treinos ----------
 export async function updateTraining(categoria, dia, formData) {
-  await requireAdmin();
+  await requireCoach();
   const rotina = String(formData.get("rotina") || "");
   const videoUrl = String(formData.get("video_url") || "").trim();
   await query(
@@ -110,7 +162,7 @@ export async function updateTraining(categoria, dia, formData) {
 // (não confundir com a rotina padrão do dia da semana, acima). Fica visível
 // para as atletas da equipe, então quem faltou consegue se atualizar.
 export async function addTrainingLog(formData) {
-  await requireAdmin();
+  await requireCoach();
   const categoria = formData.get("categoria");
   const data = String(formData.get("data") || "").trim();
   const texto = String(formData.get("texto") || "").trim();
@@ -126,7 +178,7 @@ export async function addTrainingLog(formData) {
 }
 
 export async function updateTrainingLog(logId, formData) {
-  await requireAdmin();
+  await requireCoach();
   const data = String(formData.get("data") || "").trim();
   const texto = String(formData.get("texto") || "").trim();
   if (!texto) throw new Error("Escreva o que rolou no treino.");
@@ -139,14 +191,14 @@ export async function updateTrainingLog(logId, formData) {
 }
 
 export async function deleteTrainingLog(logId) {
-  await requireAdmin();
+  await requireCoach();
   await query("delete from training_logs where id = $1", [logId]);
   revalidatePath("/treinos");
 }
 
 // ---------- competições ----------
 export async function updateCompetition(id, formData) {
-  await requireAdmin();
+  await requireCoach();
   await query(
     `update competitions set periodo = $2, regras = $3, historico_f = $4, historico_m = $5 where id = $1`,
     [
@@ -162,7 +214,7 @@ export async function updateCompetition(id, formData) {
 
 // ---------- escalação ----------
 export async function createSquad(formData) {
-  await requireAdmin();
+  await requireCoach();
   const competitionId = formData.get("competicao");
   const categoria = formData.get("categoria");
   const ano = Number(formData.get("ano")) || new Date().getFullYear();
@@ -174,13 +226,13 @@ export async function createSquad(formData) {
 }
 
 export async function deleteSquad(squadId) {
-  await requireAdmin();
+  await requireCoach();
   await query("delete from squads where id = $1", [squadId]);
   revalidatePath("/escalacao");
 }
 
 export async function toggleSquadMember(squadId, personId, convocado) {
-  await requireAdmin();
+  await requireCoach();
   await query(
     `insert into squad_members (squad_id, person_id, convocado, motivo_corte)
      values ($1, $2, $3, '')
@@ -193,7 +245,7 @@ export async function toggleSquadMember(squadId, personId, convocado) {
 }
 
 export async function setCutReason(squadId, personId, formData) {
-  await requireAdmin();
+  await requireCoach();
   const motivo = String(formData.get("motivo") || "");
   await query(
     `insert into squad_members (squad_id, person_id, convocado, motivo_corte)
@@ -207,7 +259,7 @@ export async function setCutReason(squadId, personId, formData) {
 
 // ---------- jogadas ----------
 export async function addPlay(formData) {
-  await requireAdmin();
+  await requireCoach();
   const nome = String(formData.get("nome") || "").trim();
   if (!nome) return;
   await query(
@@ -224,7 +276,7 @@ export async function addPlay(formData) {
 }
 
 export async function deletePlay(playId) {
-  await requireAdmin();
+  await requireCoach();
   await query("delete from plays where id = $1", [playId]);
   revalidatePath("/jogadas");
 }
@@ -232,7 +284,7 @@ export async function deletePlay(playId) {
 // ---------- exercícios de arremesso ----------
 // Sugestões do técnico para o time fazer; a atleta só lê.
 export async function addShootingDrill(formData) {
-  await requireAdmin();
+  await requireCoach();
   const nome = String(formData.get("nome") || "").trim();
   const categoria = String(formData.get("categoria") || "ambos");
   const videoUrl = String(formData.get("video_url") || "").trim();
@@ -261,7 +313,7 @@ export async function addShootingDrill(formData) {
 }
 
 export async function deleteShootingDrill(drillId) {
-  await requireAdmin();
+  await requireCoach();
   await query("delete from shooting_drills where id = $1", [drillId]);
   revalidatePath("/arremessos");
 }
@@ -287,7 +339,7 @@ async function sessionDoDia(categoria) {
 export async function addShootingSet(formData) {
   const user = await requireUser();
   const personId =
-    user.role === "admin" ? Number(formData.get("personId")) : Number(user.personId);
+    isCoach(user) ? Number(formData.get("personId")) : Number(user.personId);
 
   const { rows } = await query(
     "select categoria from people where id = $1 and role = 'athlete'",
@@ -321,7 +373,7 @@ export async function addShootingSet(formData) {
 
 export async function deleteShootingSet(setId) {
   const user = await requireUser();
-  if (user.role === "admin") {
+  if (isCoach(user)) {
     await query("delete from shooting_sets where id = $1", [setId]);
   } else {
     // A atleta so apaga as proprias series.

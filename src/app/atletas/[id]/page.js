@@ -1,13 +1,16 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { requireAdminPage } from "@/components/Guard";
+import { requireCoachPage } from "@/components/Guard";
 import { query } from "@/lib/db";
 import { addNote, deleteAthlete } from "@/app/actions";
 import { CategoryTag, StatusTag } from "@/components/Tag";
 import ShootingHistory from "@/components/ShootingHistory";
 
 export default async function AthleteDetailPage({ params }) {
-  await requireAdminPage();
+  const user = await requireCoachPage();
+  // E-mail e notas individuais são dados sensíveis: a comissão técnica (staff)
+  // vê a ficha sem eles — as notas nem são buscadas.
+  const isAdmin = user.role === "admin";
   const { id } = await params;
 
   const { rows } = await query(
@@ -17,10 +20,12 @@ export default async function AthleteDetailPage({ params }) {
   const athlete = rows[0];
   if (!athlete) notFound();
 
-  const { rows: notes } = await query(
-    "select id, texto, criado_em from notes where person_id = $1 order by criado_em desc",
-    [id]
-  );
+  const { rows: notes } = isAdmin
+    ? await query(
+        "select id, texto, criado_em from notes where person_id = $1 order by criado_em desc",
+        [id]
+      )
+    : { rows: [] };
 
   const boundAddNote = addNote.bind(null, athlete.id);
   const boundDelete = deleteAthlete.bind(null, athlete.id);
@@ -35,7 +40,8 @@ export default async function AthleteDetailPage({ params }) {
         <div>
           <h1 className="text-2xl font-bold">{athlete.nome}</h1>
           <div className="text-[13px] text-[var(--text-muted)] mt-1">
-            {athlete.email} · {athlete.curso || "Curso não informado"}
+            {isAdmin && `${athlete.email} · `}
+            {athlete.curso || "Curso não informado"}
             {athlete.posicao ? ` · ${athlete.posicao}` : ""}
           </div>
           <div className="flex gap-2 mt-2">
@@ -52,35 +58,39 @@ export default async function AthleteDetailPage({ params }) {
 
       <ShootingHistory personId={athlete.id} analiseHref={`/atletas/${athlete.id}/analise`} />
 
-      <h2 className="text-[13px] uppercase tracking-wide text-[var(--text-muted)] font-display font-semibold mb-3">
-        Notas de evolução
-      </h2>
+      {isAdmin && (
+        <>
+          <h2 className="text-[13px] uppercase tracking-wide text-[var(--text-muted)] font-display font-semibold mb-3">
+            Notas de evolução
+          </h2>
 
-      <form action={boundAddNote} className="flex gap-2 mb-5">
-        <input
-          type="text"
-          name="texto"
-          placeholder="Nova nota (ex: tendência de erro, evolução técnica)"
-          className="flex-1"
-        />
-        <button type="submit" className="btn btn-small">
-          Adicionar
-        </button>
-      </form>
+          <form action={boundAddNote} className="flex gap-2 mb-5">
+            <input
+              type="text"
+              name="texto"
+              placeholder="Nova nota (ex: tendência de erro, evolução técnica)"
+              className="flex-1"
+            />
+            <button type="submit" className="btn btn-small">
+              Adicionar
+            </button>
+          </form>
 
-      <div className="flex flex-col gap-2">
-        {!notes.length && (
-          <div className="text-[13px] italic text-[var(--text-muted)]">Sem notas ainda.</div>
-        )}
-        {notes.map((n) => (
-          <div key={n.id} className="card p-3">
-            <div className="text-[11px] text-[var(--text-muted)] mb-1">
-              {new Date(n.criado_em).toLocaleString("pt-BR")}
-            </div>
-            <div className="text-[13px]">{n.texto}</div>
+          <div className="flex flex-col gap-2">
+            {!notes.length && (
+              <div className="text-[13px] italic text-[var(--text-muted)]">Sem notas ainda.</div>
+            )}
+            {notes.map((n) => (
+              <div key={n.id} className="card p-3">
+                <div className="text-[11px] text-[var(--text-muted)] mb-1">
+                  {new Date(n.criado_em).toLocaleString("pt-BR")}
+                </div>
+                <div className="text-[13px]">{n.texto}</div>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
+        </>
+      )}
     </div>
   );
 }

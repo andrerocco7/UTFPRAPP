@@ -1,10 +1,11 @@
+import { isCoach } from "@/lib/roles";
 import { requireSessionPage } from "@/components/Guard";
 import { query } from "@/lib/db";
 import { updateCompetition } from "@/app/actions";
 
 export default async function CompetitionsPage() {
   const user = await requireSessionPage();
-  const isAdmin = user.role === "admin";
+  const isAdmin = isCoach(user);
 
   const { rows } = await query(
     "select id, nome, periodo, regras, historico_f, historico_m from competitions order by id"

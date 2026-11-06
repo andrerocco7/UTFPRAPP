@@ -1,3 +1,4 @@
+import { isCoach } from "@/lib/roles";
 import Link from "next/link";
 import { requireSessionPage } from "@/components/Guard";
 import { query } from "@/lib/db";
@@ -10,7 +11,7 @@ const DICA_REPETIR =
 
 export default async function ShootingPage({ searchParams }) {
   const user = await requireSessionPage();
-  const isAdmin = user.role === "admin";
+  const isAdmin = isCoach(user);
   const params = await searchParams;
 
   // O técnico abre no acompanhamento da equipe; a atleta, direto na quadra

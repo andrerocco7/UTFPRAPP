@@ -1,9 +1,10 @@
+import { isCoach } from "@/lib/roles";
 import { auth } from "@/auth";
 import { query } from "@/lib/db";
 
 export default async function OverviewPage() {
   const session = await auth();
-  const isAdmin = session.user.role === "admin";
+  const isAdmin = isCoach(session.user);
 
   const { rows: competitions } = await query(
     "select id, nome, periodo, historico_f, historico_m from competitions order by id"
