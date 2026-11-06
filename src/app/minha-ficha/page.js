@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { requireSessionPage } from "@/components/Guard";
 import { query } from "@/lib/db";
 import { CategoryTag, StatusTag } from "@/components/Tag";
+import ShootingHistory from "@/components/ShootingHistory";
 
 export default async function MyProfilePage() {
   const user = await requireSessionPage();
@@ -32,7 +33,8 @@ export default async function MyProfilePage() {
     <div>
       <h1 className="text-2xl font-bold mb-1">Minha ficha</h1>
       <p className="text-[13px] text-[var(--text-muted)] mb-6">
-        Suas informações e o que o técnico anotou sobre sua evolução.
+        Suas informações, seu aproveitamento nos arremessos e o que o técnico anotou sobre sua
+        evolução.
       </p>
 
       <div className="card p-5 mb-6">
@@ -46,6 +48,8 @@ export default async function MyProfilePage() {
           <StatusTag status={me.status} />
         </div>
       </div>
+
+      <ShootingHistory personId={user.personId} />
 
       <h2 className="text-[13px] uppercase tracking-wide text-[var(--text-muted)] font-display font-semibold mb-3">
         Notas do técnico
