@@ -9,6 +9,7 @@ const ADMIN_LINKS = [
   { href: "/competicoes", label: "Competições" },
   { href: "/escalacao", label: "Escalação" },
   { href: "/arremessos", label: "Arremessos" },
+  { href: "/ranking", label: "Ranking" },
   { href: "/financeiro", label: "Financeiro" },
   { href: "/jogadas", label: "Jogadas táticas" },
 ];
@@ -18,6 +19,7 @@ const ATHLETE_LINKS = [
   { href: "/minha-ficha", label: "Minha ficha" },
   { href: "/treinos", label: "Treinos" },
   { href: "/arremessos", label: "Arremessos" },
+  { href: "/ranking", label: "Ranking" },
   { href: "/competicoes", label: "Competições" },
   { href: "/jogadas", label: "Jogadas táticas" },
 ];
