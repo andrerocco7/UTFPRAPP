@@ -50,7 +50,7 @@ export default async function AthleteDetailPage({ params }) {
         </form>
       </div>
 
-      <ShootingHistory personId={athlete.id} />
+      <ShootingHistory personId={athlete.id} analiseHref={`/atletas/${athlete.id}/analise`} />
 
       <h2 className="text-[13px] uppercase tracking-wide text-[var(--text-muted)] font-display font-semibold mb-3">
         Notas de evolução

@@ -1,10 +1,11 @@
+import Link from "next/link";
 import { query } from "@/lib/db";
 import { spotLabel } from "@/lib/spots";
 
 // Histórico de arremessos de uma atleta: aproveitamento por ponto (todas as
 // séries já lançadas) e os últimos treinos. Usado na ficha que o técnico vê
 // e na "Minha ficha" da própria atleta.
-export default async function ShootingHistory({ personId }) {
+export default async function ShootingHistory({ personId, analiseHref }) {
   // Aproveitamento por ponto da quadra, somando todas as series ja lancadas.
   const { rows: porSpot } = await query(
     `select spot,
@@ -33,9 +34,16 @@ export default async function ShootingHistory({ personId }) {
 
   return (
     <>
-      <h2 className="text-[13px] uppercase tracking-wide text-[var(--text-muted)] font-display font-semibold mb-3">
-        Arremessos
-      </h2>
+      <div className="flex items-center justify-between gap-3 mb-3">
+        <h2 className="text-[13px] uppercase tracking-wide text-[var(--text-muted)] font-display font-semibold">
+          Arremessos
+        </h2>
+        {analiseHref && porSpot.length > 0 && (
+          <Link href={analiseHref} className="btn btn-small">
+            Ver análise →
+          </Link>
+        )}
+      </div>
       {!porSpot.length ? (
         <div className="text-[13px] italic text-[var(--text-muted)] mb-8">
           Nenhuma série registrada ainda.
