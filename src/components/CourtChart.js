@@ -25,8 +25,10 @@ function cores(p) {
   return { fill: "#3a1616", stroke: "#ff6b6b", txt: "#ff6b6b" };
 }
 
-export default function CourtChart({ atletas, sets }) {
-  const [categoria, setCategoria] = useState("M");
+// isAdmin: o técnico escolhe equipe e atleta. A atleta recebe só ela mesma
+// em `atletas` e não vê os seletores.
+export default function CourtChart({ atletas, sets, isAdmin = true, categoriaInicial = "M" }) {
+  const [categoria, setCategoria] = useState(categoriaInicial || "M");
   const [personId, setPersonId] = useState(null);
   const [spot, setSpot] = useState(null);
   const [serie, setSerie] = useState(10);
@@ -105,10 +107,16 @@ export default function CourtChart({ atletas, sets }) {
     setSpot(null);
   }
 
-  if (!atletas.length) {
+  if (!atletas.length || !atual) {
     return (
       <div className="card p-6 text-[13.5px] text-[var(--text-muted)]">
-        Cadastre atletas em <strong>Atletas</strong> para começar a registrar arremessos.
+        {isAdmin ? (
+          <>
+            Cadastre atletas em <strong>Atletas</strong> para começar a registrar arremessos.
+          </>
+        ) : (
+          "Seu cadastro ainda não tem equipe definida — fale com o técnico para liberar os arremessos."
+        )}
       </div>
     );
   }
@@ -117,7 +125,8 @@ export default function CourtChart({ atletas, sets }) {
 
   return (
     <div className="flex flex-col gap-4">
-      {/* categoria + atleta */}
+      {/* categoria + atleta (só o técnico escolhe) */}
+      {isAdmin && (
       <div className="card p-3 flex flex-col gap-3">
         <div className="flex gap-1.5">
           {["F", "M"].map((c) => (
@@ -160,6 +169,7 @@ export default function CourtChart({ atletas, sets }) {
           </button>
         </div>
       </div>
+      )}
 
       {/* quadra */}
       <div className="card p-1.5">
@@ -338,7 +348,7 @@ export default function CourtChart({ atletas, sets }) {
       {/* séries do treino */}
       <div className="card overflow-hidden">
         <div className="text-[10.5px] uppercase tracking-wide text-[var(--text-muted)] px-3 pt-3 pb-2">
-          Séries deste treino
+          {isAdmin ? "Séries deste treino" : "Suas séries de hoje"}
         </div>
         {!sets.length ? (
           <div className="px-3 pb-3 text-[13px] italic text-[var(--text-muted)]">

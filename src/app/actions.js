@@ -244,17 +244,26 @@ async function sessionDoDia(categoria) {
   return rows[0].id;
 }
 
+// O tecnico lanca serie para qualquer atleta; a atleta so para si mesma —
+// o personId do formulario e ignorado e vem da sessao. A equipe sempre vem
+// do cadastro, nunca do formulario.
 export async function addShootingSet(formData) {
-  await requireAdmin();
+  const user = await requireUser();
+  const personId =
+    user.role === "admin" ? Number(formData.get("personId")) : Number(user.personId);
 
-  const personId = Number(formData.get("personId"));
-  const categoria = String(formData.get("categoria") || "");
+  const { rows } = await query(
+    "select categoria from people where id = $1 and role = 'athlete'",
+    [personId]
+  );
+  const categoria = rows[0]?.categoria;
   const spot = String(formData.get("spot") || "");
   const tentativas = Number(formData.get("tentativas"));
   const acertos = Number(formData.get("acertos"));
 
+  if (!rows.length) throw new Error("Atleta não encontrada.");
+  if (!["F", "M"].includes(categoria)) throw new Error("Atleta sem equipe definida no cadastro.");
   if (!SPOT_IDS.includes(spot)) throw new Error("Ponto da quadra invalido.");
-  if (!["F", "M"].includes(categoria)) throw new Error("Categoria invalida.");
   if (!Number.isInteger(tentativas) || tentativas < 1 || tentativas > 200) {
     throw new Error("Numero de tentativas invalido.");
   }
@@ -274,8 +283,16 @@ export async function addShootingSet(formData) {
 }
 
 export async function deleteShootingSet(setId) {
-  await requireAdmin();
-  await query("delete from shooting_sets where id = $1", [setId]);
+  const user = await requireUser();
+  if (user.role === "admin") {
+    await query("delete from shooting_sets where id = $1", [setId]);
+  } else {
+    // A atleta so apaga as proprias series.
+    await query("delete from shooting_sets where id = $1 and person_id = $2", [
+      setId,
+      user.personId,
+    ]);
+  }
   revalidatePath("/arremessos");
   revalidatePath("/minha-ficha");
 }

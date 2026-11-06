@@ -17,6 +17,7 @@ const ATHLETE_LINKS = [
   { href: "/", label: "Visão geral" },
   { href: "/minha-ficha", label: "Minha ficha" },
   { href: "/treinos", label: "Treinos" },
+  { href: "/arremessos", label: "Arremessos" },
   { href: "/competicoes", label: "Competições" },
   { href: "/jogadas", label: "Jogadas táticas" },
 ];
