@@ -1,11 +1,58 @@
+import Link from "next/link";
 import { requireSessionPage } from "@/components/Guard";
 import { query } from "@/lib/db";
 import CourtChart from "@/components/CourtChart";
+import ShootingOverview, { PERIODOS_ACOMPANHAMENTO } from "@/components/ShootingOverview";
 
-export default async function ShootingPage() {
+const DICA_REPETIR =
+  "Pode tocar no mesmo ponto de novo quantas vezes quiser — cada toque soma uma série nova, não substitui a anterior.";
+
+export default async function ShootingPage({ searchParams }) {
   const user = await requireSessionPage();
   const isAdmin = user.role === "admin";
+  const params = await searchParams;
 
+  // O técnico abre no acompanhamento da equipe; lançar séries é a outra aba.
+  // A atleta vai direto para a quadra dela.
+  const aba = isAdmin && params.aba === "lancar" ? "lancar" : isAdmin ? "acompanhar" : "lancar";
+  const periodo = PERIODOS_ACOMPANHAMENTO.some(([p]) => p === params.periodo)
+    ? params.periodo
+    : "30d";
+
+  return (
+    <div>
+      <h1 className="text-2xl font-bold mb-1">Arremessos</h1>
+
+      {isAdmin && (
+        <div className="flex gap-1 mb-5 border-b border-[var(--border)]">
+          <Aba href={`/arremessos?periodo=${periodo}`} ativa={aba === "acompanhar"}>
+            Acompanhamento
+          </Aba>
+          <Aba href="/arremessos?aba=lancar" ativa={aba === "lancar"}>
+            Lançar séries
+          </Aba>
+        </div>
+      )}
+
+      {aba === "acompanhar" ? (
+        <>
+          <p className="text-[13px] text-[var(--text-muted)] mb-5">
+            Como cada atleta está treinando arremesso, incluindo quem não lançou nada no período.
+            Toque no nome para abrir a análise completa.
+          </p>
+          <ShootingOverview
+            periodo={periodo}
+            hrefPeriodo={(p) => `/arremessos?periodo=${p}`}
+          />
+        </>
+      ) : (
+        <Lancar user={user} isAdmin={isAdmin} />
+      )}
+    </div>
+  );
+}
+
+async function Lancar({ user, isAdmin }) {
   // Técnico lança para qualquer atleta ativa; a atleta só para si mesma.
   const { rows: atletas } = isAdmin
     ? await query(
@@ -32,14 +79,12 @@ export default async function ShootingPage() {
   );
 
   return (
-    <div>
-      <h1 className="text-2xl font-bold mb-1">Arremessos</h1>
+    <>
       <p className="text-[13px] text-[var(--text-muted)] mb-6">
         {isAdmin
           ? "Escolha o atleta, toque no ponto e marque quantos ele acertou na série."
           : "Toque no ponto da quadra e marque quantos você acertou na série."}{" "}
-        Pode tocar no mesmo ponto de novo quantas vezes quiser — cada toque soma uma série nova,
-        não substitui a anterior.
+        {DICA_REPETIR}
       </p>
       <CourtChart
         atletas={atletas}
@@ -47,6 +92,21 @@ export default async function ShootingPage() {
         isAdmin={isAdmin}
         categoriaInicial={isAdmin ? "M" : atletas[0]?.categoria}
       />
-    </div>
+    </>
+  );
+}
+
+function Aba({ href, ativa, children }) {
+  return (
+    <Link
+      href={href}
+      className={`px-3 py-2 text-[13.5px] font-semibold -mb-px border-b-2 ${
+        ativa
+          ? "border-[var(--accent)] text-[var(--text)]"
+          : "border-transparent text-[var(--text-muted)] hover:text-[var(--text)]"
+      }`}
+    >
+      {children}
+    </Link>
   );
 }
