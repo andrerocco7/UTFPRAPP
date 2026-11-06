@@ -229,6 +229,43 @@ export async function deletePlay(playId) {
   revalidatePath("/jogadas");
 }
 
+// ---------- exercícios de arremesso ----------
+// Sugestões do técnico para o time fazer; a atleta só lê.
+export async function addShootingDrill(formData) {
+  await requireAdmin();
+  const nome = String(formData.get("nome") || "").trim();
+  const categoria = String(formData.get("categoria") || "ambos");
+  const videoUrl = String(formData.get("video_url") || "").trim();
+  const pontos = formData.getAll("pontos").map(String).filter((p) => SPOT_IDS.includes(p));
+
+  if (!nome) throw new Error("Dê um nome ao exercício.");
+  if (!["F", "M", "ambos"].includes(categoria)) throw new Error("Equipe inválida.");
+  // O link vira href na página: só http(s), nada de javascript: e afins.
+  if (videoUrl && !/^https?:\/\//i.test(videoUrl)) {
+    throw new Error("O link do vídeo precisa começar com http:// ou https://.");
+  }
+
+  await query(
+    `insert into shooting_drills (nome, categoria, objetivo, descricao, video_url, pontos)
+     values ($1, $2, $3, $4, $5, $6)`,
+    [
+      nome,
+      categoria,
+      String(formData.get("objetivo") || "").trim(),
+      String(formData.get("descricao") || "").trim(),
+      videoUrl,
+      pontos,
+    ]
+  );
+  revalidatePath("/arremessos");
+}
+
+export async function deleteShootingDrill(drillId) {
+  await requireAdmin();
+  await query("delete from shooting_drills where id = $1", [drillId]);
+  revalidatePath("/arremessos");
+}
+
 // ---------- treinos de arremesso ----------
 
 // Uma sessao por dia e categoria — reabrir a pagina no mesmo treino

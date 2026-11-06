@@ -123,6 +123,19 @@ create table if not exists shooting_sets (
 create index if not exists idx_shooting_sets_person on shooting_sets (person_id);
 create index if not exists idx_shooting_sets_session on shooting_sets (session_id);
 
+-- Exercicios de arremesso que o tecnico sugere para o time fazer. pontos
+-- guarda os ids de src/lib/spots.js que o exercicio trabalha.
+create table if not exists shooting_drills (
+  id serial primary key,
+  nome text not null,
+  categoria text not null default 'ambos' check (categoria in ('F', 'M', 'ambos')),
+  objetivo text default '',
+  descricao text default '',
+  video_url text default '',
+  pontos text[] not null default '{}',
+  criado_em timestamptz not null default now()
+);
+
 -- Coordenacao do financeiro: flag numa atleta ja cadastrada, nao um papel.
 -- A atleta marcada enxerga o Financeiro so da propria equipe (coluna categoria);
 -- o tecnico (admin) enxerga as duas. Migra qualquer 'coordinator' antigo de volta
