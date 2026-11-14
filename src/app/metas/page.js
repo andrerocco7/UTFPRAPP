@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireSessionPage } from "@/components/Guard";
 import { query } from "@/lib/db";
 import { CategoryTag } from "@/components/Tag";
+import Gauge from "@/components/Gauge";
 import {
   TIPOS_META,
   META_TOTAL,
@@ -11,7 +12,6 @@ import {
   fmtPontos,
 } from "@/lib/metas";
 
-const SEMANAS_HISTORICO = 6;
 const MEDALHAS = ["🥇", "🥈", "🥉"];
 const EQUIPES = [
   { cat: "F", nome: "Feminino", curto: "Fem", cor: "var(--fem)" },
@@ -22,6 +22,19 @@ const EQUIPES = [
 function fmtDia(iso) {
   const [, m, d] = iso.split("-");
   return `${d}/${m}`;
+}
+
+// Posição de competição: empate divide a posição (1, 1, 3).
+function comPosicao(lista) {
+  let pos = 0;
+  let anterior = null;
+  return lista.map((a, i) => {
+    if (a.pontos !== anterior) {
+      pos = i + 1;
+      anterior = a.pontos;
+    }
+    return { ...a, pos };
+  });
 }
 
 function somaDias(iso, dias) {
@@ -45,7 +58,6 @@ export default async function MetasPage({ searchParams }) {
     [pedida]
   );
   const semana = semRows[0].semana;
-  const inicioHistorico = somaDias(semana, -7 * (SEMANAS_HISTORICO - 1));
 
   // Conta só o elenco ativo: afastadas não puxam a média da equipe para baixo
   // nem entram no top 3.
@@ -62,8 +74,8 @@ export default async function MetasPage({ searchParams }) {
      join shooting_sessions ss on ss.id = st.session_id
      join people p on p.id = st.person_id
      where p.role = 'athlete' and p.status <> 'afastado'
-       and ss.data >= $1::date and ss.data < $2::date + 7`,
-    [inicioHistorico, semana]
+       and ss.data >= $1::date and ss.data < $1::date + 7`,
+    [semana]
   );
 
   // contagens[semana][personId][tipo] = arremessos
@@ -91,6 +103,8 @@ export default async function MetasPage({ searchParams }) {
       lista: [...lista].sort((a, b) => b.pontos - a.pontos || a.nome.localeCompare(b.nome)),
       ativos: n,
       media: n ? soma((a) => a.pontos) / n : 0,
+      feitoMeta: soma((a) => a.base),
+      metaEquipe: n * META_TOTAL,
       progresso: n ? soma((a) => a.base) / (n * META_TOTAL) : 0,
       bateramTudo: lista.filter((a) => a.metasBatidas === TIPOS_META.length).length,
       treinaram: lista.filter((a) => a.pontos > 0).length,
@@ -108,28 +122,8 @@ export default async function MetasPage({ searchParams }) {
   const top = resultado
     .filter((a) => a.pontos > 0)
     .sort((a, b) => b.pontos - a.pontos || a.nome.localeCompare(b.nome));
-  let pos = 0;
-  let anterior = null;
-  const ranqueados = top.map((a, i) => {
-    if (a.pontos !== anterior) {
-      pos = i + 1;
-      anterior = a.pontos;
-    }
-    return { ...a, pos };
-  });
+  const ranqueados = comPosicao(top);
   const top3 = ranqueados.filter((a) => a.pos <= 3);
-
-  const historico = Array.from({ length: SEMANAS_HISTORICO }, (_, i) => {
-    const sem = somaDias(inicioHistorico, 7 * i);
-    const r = daSemana(sem);
-    return {
-      semana: sem,
-      equipes: EQUIPES.map((e) => {
-        const l = r.filter((a) => a.categoria === e.cat);
-        return { ...e, media: l.length ? l.reduce((t, a) => t + a.pontos, 0) / l.length : 0 };
-      }),
-    };
-  });
 
   const eu = user.role === "athlete" ? resultado.find((a) => a.id === user.personId) : null;
   const ehAtual = semana === semanaAtual;
@@ -161,29 +155,33 @@ export default async function MetasPage({ searchParams }) {
         )}
       </div>
 
-      {/* regra */}
-      <div className="card p-4 mb-6 text-[13px]">
-        <div className="font-semibold mb-1">Meta de cada atleta, toda semana</div>
-        <div className="flex flex-wrap gap-1.5 mb-2">
-          {TIPOS_META.map((t) => (
-            <span
-              key={t.tipo}
-              className="rounded-full border border-[var(--accent)] text-[var(--accent)] px-2.5 py-0.5 text-[12.5px] font-semibold"
-            >
-              {t.meta} {t.label === "Lance livre" ? "lances livres" : `arremessos de ${t.label}`}
-            </span>
-          ))}
-        </div>
-        <div className="text-[12.5px] text-[var(--text-muted)]">
-          Cada arremesso feito vale <strong className="text-[var(--text)]">1 ponto</strong> até a
-          meta daquele tipo. Passou da meta, cada arremesso extra vale{" "}
-          <strong className="text-[var(--accent)]">
-            {fmtPontos(MULTIPLICADOR_EXTRA)} ponto{MULTIPLICADOR_EXTRA === 1 ? "" : "s"}
-          </strong>
-          . O placar das equipes é a média de pontos por atleta ativa. Vale tudo que foi lançado
-          em <strong className="text-[var(--text)]">Arremessos</strong>, de segunda a domingo.
-        </div>
+      {/* velocímetros das equipes */}
+      <div className="grid md:grid-cols-2 gap-3 mb-3">
+        {equipes.map((e) => (
+          <div key={e.cat} className={`card p-4 ${lider === e.cat ? "border-[var(--accent)]" : ""}`}>
+            <div className="flex items-center justify-between gap-2 mb-1">
+              <span className="flex items-center gap-1.5">
+                {lider === e.cat && <span title="Na frente no placar">👑</span>}
+                <CategoryTag categoria={e.cat} />
+              </span>
+              <span className="text-[12px] tabular-nums">
+                <strong className="text-[var(--accent)]">{fmtPontos(e.media)}</strong>
+                <span className="text-[var(--text-muted)]"> pts por atleta</span>
+              </span>
+            </div>
+            <Gauge feito={e.feitoMeta} meta={e.metaEquipe} cor={e.cor} titulo={`Meta da semana — ${e.nome}`} />
+            <div className="text-center text-[11.5px] text-[var(--text-muted)] mt-1 tabular-nums">
+              {e.treinaram} de {e.ativos} treinaram · {e.bateramTudo}{" "}
+              {e.bateramTudo === 1 ? "bateu" : "bateram"} as 3 metas
+            </div>
+          </div>
+        ))}
       </div>
+      <p className="text-[11.5px] text-[var(--text-muted)] mb-6">
+        O ponteiro mostra quanto da meta semanal da equipe já foi feito: {META_TOTAL} arremessos por
+        atleta ativa. O 👑 vai para quem tem mais pontos por atleta — quem passa da meta soma{" "}
+        {fmtPontos(MULTIPLICADOR_EXTRA)}× nos extras.
+      </p>
 
       {/* minha semana */}
       {eu && (
@@ -203,17 +201,45 @@ export default async function MetasPage({ searchParams }) {
                   : `${eu.metasBatidas} de ${TIPOS_META.length} metas batidas`}
               </div>
             </div>
-            <div className="flex flex-col gap-3">
-              {eu.porTipo.map((t) => (
-                <Medidor key={t.tipo} t={t} />
-              ))}
+            <div className="grid md:grid-cols-[240px_1fr] gap-4 items-center">
+              <Gauge feito={eu.base} meta={META_TOTAL} cor="var(--accent)" titulo="Sua meta da semana" tamanho="sm" />
+              <div className="flex flex-col gap-3">
+                {eu.porTipo.map((t) => (
+                  <Medidor key={t.tipo} t={t} />
+                ))}
+              </div>
             </div>
           </div>
         </section>
       )}
 
+      {/* regra */}
+      <details className="card p-4 mb-8 text-[13px]">
+        <summary className="font-semibold cursor-pointer">Como funciona — meta de cada atleta, toda semana</summary>
+        <div className="mt-2" />
+        <div className="flex flex-wrap gap-1.5 mb-2">
+          {TIPOS_META.map((t) => (
+            <span
+              key={t.tipo}
+              className="rounded-full border border-[var(--accent)] text-[var(--accent)] px-2.5 py-0.5 text-[12.5px] font-semibold"
+            >
+              {t.meta} {t.label === "Lance livre" ? "lances livres" : `arremessos de ${t.label}`}
+            </span>
+          ))}
+        </div>
+        <div className="text-[12.5px] text-[var(--text-muted)]">
+          Cada arremesso feito vale <strong className="text-[var(--text)]">1 ponto</strong> até a
+          meta daquele tipo. Passou da meta, cada arremesso extra vale{" "}
+          <strong className="text-[var(--accent)]">
+            {fmtPontos(MULTIPLICADOR_EXTRA)} ponto{MULTIPLICADOR_EXTRA === 1 ? "" : "s"}
+          </strong>
+          . O placar das equipes é a média de pontos por atleta ativa. Vale tudo que foi lançado
+          em <strong className="text-[var(--text)]">Arremessos</strong>, de segunda a domingo.
+        </div>
+      </details>
+
       {/* duelo */}
-      <Titulo>Duelo — Feminino × Masculino</Titulo>
+      <Titulo>Por tipo de arremesso</Titulo>
       <div className="grid md:grid-cols-2 gap-3 mb-2">
         {equipes.map((e) => (
           <div
@@ -225,20 +251,8 @@ export default async function MetasPage({ searchParams }) {
                 {lider === e.cat && <span title="Na frente">👑</span>}
                 <CategoryTag categoria={e.cat} />
               </span>
-              <span className="text-[11.5px] text-[var(--text-muted)] tabular-nums">
-                {e.treinaram} de {e.ativos} treinaram
-              </span>
-            </div>
-            <div className="mt-2">
-              <span className="font-display font-bold text-[34px] text-[var(--accent)] tabular-nums leading-none">
-                {fmtPontos(e.media)}
-              </span>
-              <span className="text-[12px] text-[var(--text-muted)]"> pontos por atleta</span>
-            </div>
-            <div className="text-[12px] text-[var(--text-muted)] mt-1 tabular-nums">
-              {e.bateramTudo} {e.bateramTudo === 1 ? "atleta bateu" : "atletas bateram"} as 3 metas
-            </div>
 
+            </div>
             <div className="flex flex-col gap-2 mt-4">
               {e.porTipo.map((t) => (
                 <div key={t.tipo}>
@@ -256,8 +270,7 @@ export default async function MetasPage({ searchParams }) {
         ))}
       </div>
       <p className="text-[11.5px] text-[var(--text-muted)] mb-8">
-        As barras mostram, em média, quanto da meta de cada tipo a equipe já fez. Equipe maior não
-        ganha só por ter mais gente: o placar divide pelo elenco ativo.
+        Em média, quanto da meta de cada tipo a equipe já fez.
       </p>
 
       {/* top 3 */}
@@ -299,53 +312,6 @@ export default async function MetasPage({ searchParams }) {
           ))}
         </div>
       )}
-
-      {/* evolução */}
-      <Titulo>Últimas {SEMANAS_HISTORICO} semanas — pontos por atleta</Titulo>
-      <div className="card p-4 mb-8">
-        <div className="flex gap-4 text-[12px] mb-2">
-          {EQUIPES.map((e) => (
-            <span key={e.cat} className="flex items-center gap-1.5">
-              <span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ background: e.cor }} />
-              {e.nome}
-            </span>
-          ))}
-          <span className="flex items-center gap-1.5 text-[var(--text-muted)]">
-            <span className="inline-block w-3 border-t border-[var(--text-muted)]" />
-            meta ({META_TOTAL})
-          </span>
-        </div>
-        <Historico historico={historico} semanaSelecionada={semana} />
-        <details className="mt-3">
-          <summary className="text-[12px] text-[var(--text-muted)] cursor-pointer">
-            Ver como tabela
-          </summary>
-          <table className="mt-2">
-            <thead>
-              <tr>
-                <th>Semana</th>
-                {EQUIPES.map((e) => (
-                  <th key={e.cat} style={{ textAlign: "right" }}>
-                    {e.nome}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {historico.map((h) => (
-                <tr key={h.semana}>
-                  <td className="tabular-nums">{fmtDia(h.semana)}</td>
-                  {h.equipes.map((e) => (
-                    <td key={e.cat} style={{ textAlign: "right" }} className="tabular-nums">
-                      {fmtPontos(e.media)}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </details>
-      </div>
 
       {/* todas */}
       <Titulo>Todas as atletas</Titulo>
@@ -436,83 +402,6 @@ function Medidor({ t }) {
         </span>
       </div>
       <Barra frac={t.base / t.meta} cor={t.bateu ? "var(--success)" : "var(--accent)"} />
-    </div>
-  );
-}
-
-// Colunas agrupadas por semana (Fem e Masc), com a linha da meta. SVG puro.
-function Historico({ historico, semanaSelecionada }) {
-  const W = 420;
-  const H = 200;
-  const PAD_L = 30;
-  const PAD_B = 22;
-  const PAD_T = 14;
-  const maxDado = Math.max(...historico.flatMap((h) => h.equipes.map((e) => e.media)));
-  const topo = Math.ceil((Math.max(META_TOTAL, maxDado) * 1.12) / 50) * 50;
-  const y = (v) => PAD_T + (H - PAD_T - PAD_B) * (1 - v / topo);
-  const slot = (W - PAD_L - 4) / historico.length;
-  const BAR = Math.min(22, slot / 3);
-  const GAP = 2;
-
-  // topo arredondado 4px, base reta
-  const barra = (x, v) => {
-    const y0 = y(0);
-    const y1 = y(v);
-    const h = y0 - y1;
-    if (h <= 0) return null;
-    const r = Math.min(4, h, BAR / 2);
-    return `M${x},${y0} V${y1 + r} Q${x},${y1} ${x + r},${y1} H${x + BAR - r} Q${x + BAR},${y1} ${x + BAR},${y1 + r} V${y0} Z`;
-  };
-
-  const ticks = [0, topo / 2, topo];
-
-  return (
-    <div>
-      <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto" role="img"
-        aria-label="Pontos por atleta de cada equipe nas últimas semanas">
-        {ticks.map((t) => (
-          <g key={t}>
-            <line x1={PAD_L} x2={W} y1={y(t)} y2={y(t)} stroke="var(--border)" strokeWidth="1" />
-            <text x={PAD_L - 6} y={y(t) + 4} textAnchor="end" fontSize="11" fill="var(--text-muted)">
-              {t}
-            </text>
-          </g>
-        ))}
-        <line x1={PAD_L} x2={W} y1={y(META_TOTAL)} y2={y(META_TOTAL)} stroke="var(--text-muted)"
-          strokeWidth="1" />
-        <text x={W - 2} y={y(META_TOTAL) - 4} textAnchor="end" fontSize="11" fill="var(--text-muted)">
-          meta
-        </text>
-
-        {historico.map((h, i) => {
-          const cx = PAD_L + slot * i + slot / 2;
-          const x0 = cx - BAR - GAP / 2;
-          const sel = h.semana === semanaSelecionada;
-          return (
-            <g key={h.semana}>
-              {h.equipes.map((e, j) => {
-                const d = barra(x0 + j * (BAR + GAP), e.media);
-                return (
-                  <g key={e.cat}>
-                    {/* alvo de hover maior que a barra */}
-                    <rect x={x0 + j * (BAR + GAP)} y={PAD_T} width={BAR} height={H - PAD_T - PAD_B}
-                      fill="transparent">
-                      <title>{`${e.nome}, semana de ${fmtDia(h.semana)}: ${fmtPontos(e.media)} pontos por atleta`}</title>
-                    </rect>
-                    {d && (
-                      <path d={d} fill={e.cor} opacity={sel ? 1 : 0.55} pointerEvents="none" />
-                    )}
-                  </g>
-                );
-              })}
-              <text x={cx} y={H - 6} textAnchor="middle" fontSize="11.5"
-                fill={sel ? "var(--text)" : "var(--text-muted)"} fontWeight={sel ? 600 : 400}>
-                {fmtDia(h.semana)}
-              </text>
-            </g>
-          );
-        })}
-      </svg>
     </div>
   );
 }
