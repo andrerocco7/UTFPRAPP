@@ -196,3 +196,27 @@ create table if not exists finance_expenses (
 );
 
 create index if not exists idx_finance_payments_charge on finance_payments (charge_id);
+
+-- Sala de troféus: títulos e pódios das equipes, um por competição/ano/
+-- equipe/colocação. O tecnico cadastra; todo mundo ve.
+create table if not exists titles (
+  id serial primary key,
+  competicao text not null,
+  ano integer not null check (ano between 1950 and 2100),
+  categoria text not null check (categoria in ('F', 'M')),
+  colocacao text not null default 'campeao' check (colocacao in ('campeao', 'vice', 'terceiro')),
+  detalhe text default '',
+  criado_em timestamptz not null default now(),
+  unique (competicao, ano, categoria, colocacao)
+);
+
+-- Ponto de partida tirado do historico das competicoes — so o que tem ano
+-- certo. Entra so com a tabela vazia, para o seed nao recriar um titulo
+-- que o tecnico apagou.
+insert into titles (competicao, ano, categoria, colocacao, detalhe)
+select * from (values
+  ('Engenhariadas Paranaense', 2023, 'M', 'campeao', ''),
+  ('JUPS — Jogos Universitários do Paraná', 2026, 'M', 'campeao', 'Série prata'),
+  ('JUPS — Jogos Universitários do Paraná', 2026, 'F', 'vice', 'Chave ouro')
+) as t(competicao, ano, categoria, colocacao, detalhe)
+where not exists (select 1 from titles);

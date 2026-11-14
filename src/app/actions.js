@@ -544,3 +544,34 @@ export async function deleteExpense(expenseId) {
   await query("delete from finance_expenses where id = $1", [expenseId]);
   revalidatePath("/financeiro");
 }
+
+// ---------- sala de troféus ----------
+const COLOCACOES = ["campeao", "vice", "terceiro"];
+
+export async function addTitle(formData) {
+  await requireCoach();
+  const competicao = String(formData.get("competicao") || "").trim();
+  const ano = Number(formData.get("ano"));
+  const categoria = String(formData.get("categoria") || "");
+  const colocacao = String(formData.get("colocacao") || "campeao");
+  if (!competicao) throw new Error("Diga qual foi a competição.");
+  if (!Number.isInteger(ano) || ano < 1950 || ano > 2100) throw new Error("Ano inválido.");
+  if (!["F", "M"].includes(categoria)) throw new Error("Equipe inválida.");
+  if (!COLOCACOES.includes(colocacao)) throw new Error("Colocação inválida.");
+
+  await query(
+    `insert into titles (competicao, ano, categoria, colocacao, detalhe)
+     values ($1, $2, $3, $4, $5)
+     on conflict (competicao, ano, categoria, colocacao) do update set detalhe = excluded.detalhe`,
+    [competicao, ano, categoria, colocacao, String(formData.get("detalhe") || "").trim()]
+  );
+  revalidatePath("/trofeus");
+  revalidatePath("/");
+}
+
+export async function deleteTitle(titleId) {
+  await requireCoach();
+  await query("delete from titles where id = $1", [titleId]);
+  revalidatePath("/trofeus");
+  revalidatePath("/");
+}
