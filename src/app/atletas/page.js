@@ -26,7 +26,8 @@ export default async function AthletesPage() {
       <h1 className="text-2xl font-bold mb-1">Atletas</h1>
       <p className="text-[13px] text-[var(--text-muted)] mb-6">
         Ficha de cada atleta, feminino e masculino. O e-mail cadastrado precisa ser o
-        institucional da UTFPR — é com ele que a atleta faz login. Mude o status direto na lista:
+        institucional da UTFPR — é com ele que a atleta faz login. Atleta externa (sem e-mail
+        UTFPR): cadastre sem e-mail e gere o link dela na ficha. Mude o status direto na lista:
         <strong> afastada</strong> sai do lançamento de séries, do ranking e da conta das metas da
         equipe, sem perder o histórico.
       </p>
@@ -37,8 +38,8 @@ export default async function AthletesPage() {
           <Field label="Nome">
             <input type="text" name="nome" required />
           </Field>
-          <Field label="E-mail institucional">
-            <input type="email" name="email" required placeholder="nome@alunos.utfpr.edu.br" />
+          <Field label="E-mail institucional (vazio = atleta externa)">
+            <input type="email" name="email" placeholder="nome@alunos.utfpr.edu.br" />
           </Field>
           <Field label="Categoria">
             <select name="categoria" defaultValue="F">
@@ -177,7 +178,14 @@ function AthleteGroup({ title, categoria, list }) {
             }`}
           >
             <Link href={`/atletas/${a.id}`} className="min-w-0 flex-1 hover:text-[var(--accent)]">
-              <div className="font-display font-semibold text-[14.5px] truncate">{a.nome}</div>
+              <div className="font-display font-semibold text-[14.5px] truncate">
+                {a.nome}
+                {!a.email && (
+                  <span className="ml-1.5 align-middle rounded-full border border-[var(--border)] px-1.5 py-px text-[10.5px] font-sans font-medium text-[var(--text-muted)]">
+                    externa
+                  </span>
+                )}
+              </div>
               <div className="text-[12px] text-[var(--text-muted)] truncate">
                 {a.curso || "Curso não informado"}
                 {a.posicao ? ` · ${a.posicao}` : ""}

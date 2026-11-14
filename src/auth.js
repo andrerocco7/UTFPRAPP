@@ -18,11 +18,13 @@ async function findPersonByEmail(email) {
   return rows[0] || null;
 }
 
+// Link sem prazo tem expira_em null: vale até o técnico desativar.
+const LINK_VIGENTE = "revogado_em is null and (expira_em is null or expira_em > now())";
+
 async function linkValido(linkId) {
-  const { rows } = await query(
-    "select 1 from access_links where id = $1 and revogado_em is null and expira_em > now()",
-    [linkId]
-  );
+  const { rows } = await query(`select 1 from access_links where id = $1 and ${LINK_VIGENTE}`, [
+    linkId,
+  ]);
   return rows.length > 0;
 }
 
@@ -39,8 +41,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         params: allowedDomains.length ? { hd: allowedDomains[0] } : {},
       },
     }),
-    // Comissão técnica entrando por link de acesso (veja /acessos). Sem conta
-    // Google: o token do link é a credencial.
+    // Link de acesso (veja /acessos), sem conta Google: o token do link é a
+    // credencial. Link sem person_id é da comissão técnica (staff); com
+    // person_id, é de uma atleta externa e entra como ela.
     Credentials({
       id: "link",
       name: "Link de acesso",
@@ -50,12 +53,30 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (!token) return null;
         const { rows } = await query(
           `update access_links set ultimo_uso = now()
-           where token_hash = $1 and revogado_em is null and expira_em > now()
-           returning id, nome`,
+           where token_hash = $1 and ${LINK_VIGENTE}
+           returning id, nome, person_id`,
           [hashToken(token)]
         );
-        if (!rows.length) return null;
-        return { id: `link-${rows[0].id}`, name: rows[0].nome, role: "staff", linkId: rows[0].id };
+        const link = rows[0];
+        if (!link) return null;
+
+        if (link.person_id) {
+          const { rows: p } = await query(
+            "select id, nome, categoria, coordena from people where id = $1 and role = 'athlete'",
+            [link.person_id]
+          );
+          if (!p.length) return null;
+          return {
+            id: `link-${link.id}`,
+            name: p[0].nome,
+            role: "athlete",
+            linkId: link.id,
+            personId: p[0].id,
+            categoria: p[0].categoria,
+            coordena: p[0].coordena,
+          };
+        }
+        return { id: `link-${link.id}`, name: link.nome, role: "staff", linkId: link.id };
       },
     }),
   ],
@@ -81,13 +102,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       return true;
     },
     async jwt({ token, user }) {
-      if (user?.role === "staff") {
-        token.role = "staff";
+      if (user?.linkId) {
+        token.role = user.role;
         token.linkId = user.linkId;
         token.nome = user.name;
-        token.personId = null;
-        token.categoria = null;
-        token.coordena = false;
+        token.personId = user.personId ?? null;
+        token.categoria = user.categoria ?? null;
+        token.coordena = user.coordena ?? false;
       } else if (user?.email) {
         const person = await findPersonByEmail(user.email);
         if (person) {
@@ -101,7 +122,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
       // Link revogado ou expirado derruba a sessão já na próxima requisição,
       // sem esperar o cookie expirar: devolver null faz auth() retornar vazio.
-      if (token.role === "staff" && !(await linkValido(token.linkId))) return null;
+      if (token.linkId && !(await linkValido(token.linkId))) return null;
 
       return token;
     },

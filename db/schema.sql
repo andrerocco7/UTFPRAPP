@@ -136,6 +136,13 @@ create table if not exists access_links (
   ultimo_uso timestamptz
 );
 
+-- Atletas externas (treinam com o time, sem e-mail da UTFPR): a atleta pode
+-- ficar sem e-mail e entra por um link de acesso ligado a ela (person_id),
+-- que pode nao ter prazo (expira_em null) — vale ate o tecnico desativar.
+alter table people alter column email drop not null;
+alter table access_links add column if not exists person_id integer references people(id) on delete cascade;
+alter table access_links alter column expira_em drop not null;
+
 -- Exercicios de arremesso que o tecnico sugere para o time fazer. pontos
 -- guarda os ids de src/lib/spots.js que o exercicio trabalha.
 create table if not exists shooting_drills (

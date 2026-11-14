@@ -40,7 +40,8 @@ export default async function MyProfilePage() {
       <div className="card p-5 mb-6">
         <div className="font-display font-semibold text-[16px]">{me.nome}</div>
         <div className="text-[12.5px] text-[var(--text-muted)] mt-1">
-          {me.email} · {me.curso || "Curso não informado"}
+          {me.email ? `${me.email} · ` : ""}
+          {me.curso || "Curso não informado"}
           {me.posicao ? ` · ${me.posicao}` : ""}
         </div>
         <div className="flex gap-2 mt-2">

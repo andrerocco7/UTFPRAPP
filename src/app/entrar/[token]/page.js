@@ -10,8 +10,8 @@ export default async function EntrarPage({ params, searchParams }) {
   const { erro } = await searchParams;
 
   const { rows } = await query(
-    `select nome, expira_em from access_links
-     where token_hash = $1 and revogado_em is null and expira_em > now()`,
+    `select nome, expira_em, person_id from access_links
+     where token_hash = $1 and revogado_em is null and (expira_em is null or expira_em > now())`,
     [hashToken(decodeURIComponent(token))]
   );
   const link = rows[0];
@@ -32,7 +32,7 @@ export default async function EntrarPage({ params, searchParams }) {
         {!link || erro ? (
           <>
             <p className="text-[13px] text-[var(--text-muted)] mt-1 mb-6">
-              Painel do técnico — acesso da comissão técnica.
+              Painel do Basquete UTFPR.
             </p>
             <div className="text-left text-[12.5px] rounded-lg px-3 py-2 bg-[var(--danger-soft)] text-[var(--danger)]">
               Este link de acesso não vale mais: foi desativado pelo técnico ou expirou. Peça um
@@ -42,11 +42,15 @@ export default async function EntrarPage({ params, searchParams }) {
         ) : (
           <>
             <p className="text-[13px] text-[var(--text-muted)] mt-1 mb-1">
-              Você recebeu acesso ao painel do técnico como comissão técnica.
+              {link.person_id
+                ? "Seu acesso de atleta ao painel do time: sua ficha, seus arremessos, metas e ranking."
+                : "Você recebeu acesso ao painel do técnico como comissão técnica."}
             </p>
             <p className="text-[12px] text-[var(--text-muted)] mb-6">
-              Acesso de <strong className="text-[var(--text)]">{link.nome}</strong>, válido até{" "}
-              {new Date(link.expira_em).toLocaleDateString("pt-BR")}.
+              Acesso de <strong className="text-[var(--text)]">{link.nome}</strong>
+              {link.expira_em
+                ? `, válido até ${new Date(link.expira_em).toLocaleDateString("pt-BR")}.`
+                : " — sem prazo. Salve este link nos favoritos para entrar de novo."}
             </p>
             <form action={boundEntrar}>
               <button type="submit" className="btn w-full justify-center">

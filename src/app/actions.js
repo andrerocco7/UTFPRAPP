@@ -46,21 +46,41 @@ const VALIDADES_DIAS = [7, 30, 90];
 
 // Assinatura de useActionState: devolve o link uma única vez — no banco fica
 // só o hash, então não dá para mostrar de novo depois.
+// tipo "staff": comissão técnica, sempre com prazo.
+// tipo "atleta": login de uma atleta (externa, sem e-mail UTFPR); pode ser
+// sem prazo (dias = 0) — vale até o técnico desativar.
 export async function createAccessLink(_prev, formData) {
   await requireAdmin();
-  const nome = String(formData.get("nome") || "").trim();
+  const tipo = String(formData.get("tipo") || "staff");
   const dias = Number(formData.get("dias"));
+  const token = novoToken();
+
+  if (tipo === "atleta") {
+    const personId = Number(formData.get("personId"));
+    if (dias !== 0 && !VALIDADES_DIAS.includes(dias)) return { erro: "Validade inválida." };
+    const { rows } = await query("select nome from people where id = $1 and role = 'athlete'", [
+      personId,
+    ]);
+    if (!rows.length) return { erro: "Escolha a atleta." };
+    await query(
+      `insert into access_links (nome, token_hash, person_id, expira_em)
+       values ($1, $2, $3, case when $4::int = 0 then null else now() + make_interval(days => $4::int) end)`,
+      [rows[0].nome, hashToken(token), personId, dias]
+    );
+    revalidatePath("/acessos");
+    return { token, nome: rows[0].nome, tipo };
+  }
+
+  const nome = String(formData.get("nome") || "").trim();
   if (!nome) return { erro: "Diga para quem é o link." };
   if (!VALIDADES_DIAS.includes(dias)) return { erro: "Validade inválida." };
-
-  const token = novoToken();
   await query(
     `insert into access_links (nome, token_hash, expira_em)
      values ($1, $2, now() + make_interval(days => $3))`,
     [nome, hashToken(token), dias]
   );
   revalidatePath("/acessos");
-  return { token, nome };
+  return { token, nome, tipo };
 }
 
 export async function revokeAccessLink(linkId) {
@@ -86,8 +106,9 @@ export async function entrarComLink(token) {
 export async function addAthlete(formData) {
   await requireCoach();
   const nome = String(formData.get("nome") || "").trim();
-  const email = String(formData.get("email") || "").trim().toLowerCase();
-  if (!nome || !email) throw new Error("Nome e e-mail institucional são obrigatórios.");
+  // Sem e-mail = atleta externa: entra por link de acesso (veja /acessos).
+  const email = String(formData.get("email") || "").trim().toLowerCase() || null;
+  if (!nome) throw new Error("O nome é obrigatório.");
 
   await query(
     `insert into people (nome, email, role, categoria, curso, posicao, status)

@@ -11,30 +11,37 @@ function fmt(d) {
 
 // Só o técnico gera e desativa links — se a comissão pudesse, um link
 // revogado poderia ter gerado outro antes.
-export default async function AccessLinksPage() {
+export default async function AccessLinksPage({ searchParams }) {
   await requireAdminPage();
+  const { atleta } = await searchParams;
 
   const { rows: links } = await query(
-    `select id, nome, criado_em, expira_em, revogado_em, ultimo_uso,
-            (revogado_em is null and expira_em > now()) as ativo
-     from access_links
-     order by (revogado_em is null and expira_em > now()) desc, criado_em desc`
+    `select l.id, l.nome, l.criado_em, l.expira_em, l.revogado_em, l.ultimo_uso, l.person_id,
+            (l.revogado_em is null and (l.expira_em is null or l.expira_em > now())) as ativo
+     from access_links l
+     order by ativo desc, l.criado_em desc`
+  );
+
+  const { rows: atletas } = await query(
+    `select id, nome, categoria, (email is null) as externa
+     from people where role = 'athlete' order by nome`
   );
 
   return (
     <div>
       <h1 className="text-2xl font-bold mb-1">Acessos</h1>
       <p className="text-[13px] text-[var(--text-muted)] mb-2">
-        Links para a comissão técnica entrar no painel sem conta Google. Quem entra por link age
-        como técnico — cadastra atletas, lança séries, edita treinos, escalação e jogadas — mas{" "}
-        <strong>não vê</strong> e-mails das atletas, notas individuais nem o Financeiro, e não mexe
-        na coordenação nem nos links.
+        Links para entrar no painel sem conta Google. <strong>Comissão técnica</strong> age como
+        técnico — cadastra atletas, lança séries, edita treinos, escalação e jogadas — mas não vê
+        e-mails das atletas, notas individuais nem o Financeiro. <strong>Atleta externa</strong>{" "}
+        (treina com o time e não tem e-mail da UTFPR) entra como ela mesma, e o link pode ser sem
+        prazo.
       </p>
       <p className="text-[12.5px] text-[var(--danger)] mb-6">
         Quem tiver o link entra: mande só para quem precisa e desative quando não precisar mais.
       </p>
 
-      <NewAccessLinkForm />
+      <NewAccessLinkForm atletas={atletas} atletaInicial={Number(atleta) || null} />
 
       {!links.length ? (
         <div className="text-[13px] italic text-[var(--text-muted)]">Nenhum link criado ainda.</div>
@@ -52,12 +59,17 @@ export default async function AccessLinksPage() {
                   <div className="flex items-center gap-2">
                     <span className="font-display font-semibold text-[14.5px] truncate">{l.nome}</span>
                     <span className={`tag ${l.ativo ? "tag-ativo" : "tag-afastado"}`}>{status}</span>
+                    <span className="text-[11px] text-[var(--text-muted)]">
+                      {l.person_id ? "atleta" : "comissão"}
+                    </span>
                   </div>
                   <div className="text-[11.5px] text-[var(--text-muted)] mt-1 tabular-nums">
                     Criado {fmt(l.criado_em)} ·{" "}
                     {l.revogado_em
                       ? `desativado ${fmt(l.revogado_em)}`
-                      : `${l.ativo ? "vale até" : "expirou"} ${fmt(l.expira_em)}`}{" "}
+                      : !l.expira_em
+                        ? "sem prazo"
+                        : `${l.ativo ? "vale até" : "expirou"} ${fmt(l.expira_em)}`}{" "}
                     · última entrada {fmt(l.ultimo_uso)}
                   </div>
                 </div>

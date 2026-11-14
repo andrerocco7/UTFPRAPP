@@ -41,7 +41,7 @@ export default async function AthleteDetailPage({ params }) {
         <div>
           <h1 className="text-2xl font-bold">{athlete.nome}</h1>
           <div className="text-[13px] text-[var(--text-muted)] mt-1">
-            {isAdmin && `${athlete.email} · `}
+            {isAdmin && (athlete.email ? `${athlete.email} · ` : "Atleta externa · ")}
             {athlete.curso || "Curso não informado"}
             {athlete.posicao ? ` · ${athlete.posicao}` : ""}
           </div>
@@ -50,11 +50,18 @@ export default async function AthleteDetailPage({ params }) {
             <StatusTag status={athlete.status} />
           </div>
         </div>
-        <form action={boundDelete}>
-          <button type="submit" className="btn btn-danger btn-small">
-            Remover atleta
-          </button>
-        </form>
+        <div className="flex flex-col items-end gap-2 shrink-0">
+          {isAdmin && (
+            <Link href={`/acessos?atleta=${athlete.id}`} className="btn btn-secondary btn-small">
+              Gerar link de acesso
+            </Link>
+          )}
+          <form action={boundDelete}>
+            <button type="submit" className="btn btn-danger btn-small">
+              Remover atleta
+            </button>
+          </form>
+        </div>
       </div>
 
       <details className="card mb-8 group">
