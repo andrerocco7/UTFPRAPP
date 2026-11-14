@@ -2,7 +2,8 @@ import Link from "next/link";
 import { requireCoachPage } from "@/components/Guard";
 import { query } from "@/lib/db";
 import { addAthlete, addCoordinator, removeCoordinator } from "@/app/actions";
-import { CategoryTag, StatusTag } from "@/components/Tag";
+import { CategoryTag } from "@/components/Tag";
+import StatusSelect from "@/components/StatusSelect";
 
 export default async function AthletesPage() {
   const user = await requireCoachPage();
@@ -10,8 +11,10 @@ export default async function AthletesPage() {
   const { rows: athletes } = await query(
     "select id, nome, email, categoria, curso, posicao, status, coordena from people where role = 'athlete' order by nome"
   );
-  const fem = athletes.filter((a) => a.categoria === "F");
-  const masc = athletes.filter((a) => a.categoria === "M");
+  // Afastadas vão para o fim da lista de cada equipe.
+  const porStatus = (a, b) => (a.status === "afastado") - (b.status === "afastado");
+  const fem = athletes.filter((a) => a.categoria === "F").sort(porStatus);
+  const masc = athletes.filter((a) => a.categoria === "M").sort(porStatus);
 
   // Coordenação = atletas com a flag ligada. As demais (com equipe definida)
   // são as candidatas que aparecem no seletor.
@@ -23,7 +26,9 @@ export default async function AthletesPage() {
       <h1 className="text-2xl font-bold mb-1">Atletas</h1>
       <p className="text-[13px] text-[var(--text-muted)] mb-6">
         Ficha de cada atleta, feminino e masculino. O e-mail cadastrado precisa ser o
-        institucional da UTFPR — é com ele que a atleta faz login.
+        institucional da UTFPR — é com ele que a atleta faz login. Mude o status direto na lista:
+        <strong> afastada</strong> sai do lançamento de séries, do ranking e da conta das metas da
+        equipe, sem perder o histórico.
       </p>
 
       <div className="card p-5 mb-8">
@@ -146,10 +151,17 @@ function CoordinatorSection({ coordinators, candidates }) {
 }
 
 function AthleteGroup({ title, categoria, list }) {
+  const ativos = list.filter((a) => a.status !== "afastado").length;
   return (
     <div className="mb-8">
-      <h2 className="text-[15px] font-display font-semibold mb-3">
-        <CategoryTag categoria={categoria} /> <span className="ml-1">({list.length})</span>
+      <h2 className="text-[15px] font-display font-semibold mb-3 flex items-center gap-2">
+        <CategoryTag categoria={categoria} />
+        <span>
+          {ativos} ativas
+          {list.length > ativos && (
+            <span className="text-[var(--text-muted)] font-normal"> · {list.length - ativos} afastadas</span>
+          )}
+        </span>
       </h2>
       {!list.length && (
         <div className="text-[13px] italic text-[var(--text-muted)]">
@@ -158,22 +170,23 @@ function AthleteGroup({ title, categoria, list }) {
       )}
       <div className="flex flex-col gap-2">
         {list.map((a) => (
-          <Link
+          <div
             key={a.id}
-            href={`/atletas/${a.id}`}
-            className="card p-4 flex items-center justify-between gap-3 hover:border-[var(--accent)] transition-colors"
+            className={`card p-3 pl-4 flex items-center justify-between gap-3 ${
+              a.status === "afastado" ? "opacity-60" : ""
+            }`}
           >
-            <div className="min-w-0">
-              <div className="font-display font-semibold text-[14.5px]">{a.nome}</div>
-              <div className="text-[12px] text-[var(--text-muted)]">
+            <Link href={`/atletas/${a.id}`} className="min-w-0 flex-1 hover:text-[var(--accent)]">
+              <div className="font-display font-semibold text-[14.5px] truncate">{a.nome}</div>
+              <div className="text-[12px] text-[var(--text-muted)] truncate">
                 {a.curso || "Curso não informado"}
                 {a.posicao ? ` · ${a.posicao}` : ""}
               </div>
+            </Link>
+            <div className="shrink-0">
+              <StatusSelect personId={a.id} status={a.status} />
             </div>
-            <span className="shrink-0">
-              <StatusTag status={a.status} />
-            </span>
-          </Link>
+          </div>
         ))}
       </div>
     </div>

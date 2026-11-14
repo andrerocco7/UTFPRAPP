@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireCoachPage } from "@/components/Guard";
 import { query } from "@/lib/db";
-import { addNote, deleteAthlete } from "@/app/actions";
+import { addNote, deleteAthlete, updateAthlete } from "@/app/actions";
 import { CategoryTag, StatusTag } from "@/components/Tag";
 import ShootingHistory from "@/components/ShootingHistory";
 
@@ -29,6 +29,7 @@ export default async function AthleteDetailPage({ params }) {
 
   const boundAddNote = addNote.bind(null, athlete.id);
   const boundDelete = deleteAthlete.bind(null, athlete.id);
+  const boundUpdate = updateAthlete.bind(null, athlete.id);
 
   return (
     <div>
@@ -55,6 +56,42 @@ export default async function AthleteDetailPage({ params }) {
           </button>
         </form>
       </div>
+
+      <details className="card mb-8 group">
+        <summary className="cursor-pointer select-none px-4 py-3 text-[13px] font-semibold">
+          Editar dados da atleta
+        </summary>
+        <form action={boundUpdate} className="grid md:grid-cols-3 gap-3 px-4 pb-4">
+          <Field label="Nome">
+            <input type="text" name="nome" required defaultValue={athlete.nome} />
+          </Field>
+          <Field label="Equipe">
+            <select name="categoria" defaultValue={athlete.categoria || "F"}>
+              <option value="F">Feminino</option>
+              <option value="M">Masculino</option>
+            </select>
+          </Field>
+          <Field label="Status">
+            <select name="status" defaultValue={athlete.status}>
+              <option value="ativo">Ativo</option>
+              <option value="observacao">Em observação</option>
+              <option value="lesionado">Lesionado</option>
+              <option value="afastado">Afastado</option>
+            </select>
+          </Field>
+          <Field label="Curso">
+            <input type="text" name="curso" defaultValue={athlete.curso || ""} />
+          </Field>
+          <Field label="Posição">
+            <input type="text" name="posicao" defaultValue={athlete.posicao || ""} />
+          </Field>
+          <div className="flex items-end">
+            <button type="submit" className="btn">
+              Salvar
+            </button>
+          </div>
+        </form>
+      </details>
 
       <ShootingHistory personId={athlete.id} analiseHref={`/atletas/${athlete.id}/analise`} />
 
@@ -92,5 +129,14 @@ export default async function AthleteDetailPage({ params }) {
         </>
       )}
     </div>
+  );
+}
+
+function Field({ label, children }) {
+  return (
+    <label className="block text-[11.5px] text-[var(--text-muted)]">
+      {label}
+      <div className="mt-1">{children}</div>
+    </label>
   );
 }

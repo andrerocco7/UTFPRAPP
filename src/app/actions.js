@@ -104,6 +104,53 @@ export async function addAthlete(formData) {
   revalidatePath("/atletas");
 }
 
+const STATUS = ["ativo", "observacao", "lesionado", "afastado"];
+
+// "afastado" tira a atleta do lançamento de séries, do acompanhamento, do
+// ranking e da conta das metas da equipe — é o jeito de marcar quem não está
+// indo treinar sem apagar o histórico.
+export async function updateAthleteStatus(personId, status) {
+  await requireCoach();
+  if (!STATUS.includes(status)) throw new Error("Status inválido.");
+  await query("update people set status = $1 where id = $2 and role = 'athlete'", [
+    status,
+    personId,
+  ]);
+  revalidatePath("/atletas");
+  revalidatePath(`/atletas/${personId}`);
+  revalidatePath("/arremessos");
+  revalidatePath("/ranking");
+  revalidatePath("/metas");
+}
+
+export async function updateAthlete(personId, formData) {
+  await requireCoach();
+  const nome = String(formData.get("nome") || "").trim();
+  const categoria = String(formData.get("categoria") || "");
+  const status = String(formData.get("status") || "");
+  if (!nome) throw new Error("O nome não pode ficar vazio.");
+  if (!["F", "M"].includes(categoria)) throw new Error("Equipe inválida.");
+  if (!STATUS.includes(status)) throw new Error("Status inválido.");
+
+  await query(
+    `update people set nome = $1, categoria = $2, curso = $3, posicao = $4, status = $5
+     where id = $6 and role = 'athlete'`,
+    [
+      nome,
+      categoria,
+      String(formData.get("curso") || "").trim(),
+      String(formData.get("posicao") || "").trim(),
+      status,
+      personId,
+    ]
+  );
+  revalidatePath("/atletas");
+  revalidatePath(`/atletas/${personId}`);
+  revalidatePath("/arremessos");
+  revalidatePath("/ranking");
+  revalidatePath("/metas");
+}
+
 export async function deleteAthlete(personId) {
   await requireCoach();
   await query("delete from people where id = $1 and role = 'athlete'", [personId]);
