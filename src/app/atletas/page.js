@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { requireCoachPage } from "@/components/Guard";
 import { query } from "@/lib/db";
-import { addAthlete, addCoordinator, removeCoordinator } from "@/app/actions";
+import { addCoordinator, removeCoordinator } from "@/app/actions";
+import AddAthleteForm from "@/components/AddAthleteForm";
 import { CategoryTag } from "@/components/Tag";
 import StatusSelect from "@/components/StatusSelect";
 
@@ -32,45 +33,10 @@ export default async function AthletesPage() {
         equipe, sem perder o histórico.
       </p>
 
-      <div className="card p-5 mb-8">
-        <h3 className="font-semibold text-[13.5px] mb-3">Adicionar atleta</h3>
-        <form action={addAthlete} className="grid md:grid-cols-3 gap-3">
-          <Field label="Nome">
-            <input type="text" name="nome" required />
-          </Field>
-          <Field label="E-mail institucional (vazio = atleta externa)">
-            <input type="email" name="email" placeholder="nome@alunos.utfpr.edu.br" />
-          </Field>
-          <Field label="Categoria">
-            <select name="categoria" defaultValue="F">
-              <option value="F">Feminino</option>
-              <option value="M">Masculino</option>
-            </select>
-          </Field>
-          <Field label="Curso">
-            <input type="text" name="curso" placeholder="Ex: Engenharia Civil" />
-          </Field>
-          <Field label="Posição">
-            <input type="text" name="posicao" placeholder="Ex: Armadora, Ala-pivô" />
-          </Field>
-          <Field label="Status">
-            <select name="status" defaultValue="ativo">
-              <option value="ativo">Ativo</option>
-              <option value="observacao">Em observação</option>
-              <option value="lesionado">Lesionado</option>
-              <option value="afastado">Afastado</option>
-            </select>
-          </Field>
-          <div className="md:col-span-3">
-            <button type="submit" className="btn">
-              Adicionar atleta
-            </button>
-          </div>
-        </form>
-      </div>
+      <AddAthleteForm />
 
-      <AthleteGroup title="Feminino" categoria="F" list={fem} />
-      <AthleteGroup title="Masculino" categoria="M" list={masc} />
+      <AthleteGroup title="Feminino" categoria="F" list={fem} isAdmin={user.role === "admin"} />
+      <AthleteGroup title="Masculino" categoria="M" list={masc} isAdmin={user.role === "admin"} />
 
       {/* Coordenação mexe no acesso ao Financeiro e mostra e-mails: só o técnico. */}
       {user.role === "admin" && (
@@ -151,7 +117,7 @@ function CoordinatorSection({ coordinators, candidates }) {
   );
 }
 
-function AthleteGroup({ title, categoria, list }) {
+function AthleteGroup({ title, categoria, list, isAdmin }) {
   const ativos = list.filter((a) => a.status !== "afastado").length;
   return (
     <div className="mb-8">
@@ -191,7 +157,16 @@ function AthleteGroup({ title, categoria, list }) {
                 {a.posicao ? ` · ${a.posicao}` : ""}
               </div>
             </Link>
-            <div className="shrink-0">
+            <div className="shrink-0 flex items-center gap-2">
+              {isAdmin && !a.email && (
+                <Link
+                  href={`/acessos?atleta=${a.id}`}
+                  className="btn btn-secondary btn-small whitespace-nowrap"
+                  title="Gerar um novo link de acesso para esta atleta externa"
+                >
+                  Link
+                </Link>
+              )}
               <StatusSelect personId={a.id} status={a.status} />
             </div>
           </div>

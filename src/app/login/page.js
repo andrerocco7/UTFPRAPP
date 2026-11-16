@@ -58,9 +58,15 @@ export default async function LoginPage({ searchParams }) {
           </button>
         </form>
 
-        <p className="text-[11px] text-[var(--text-muted)] mt-5">
-          Acesso restrito à comunidade UTFPR e liberado pelo técnico.
-        </p>
+        <div className="mt-5 text-left text-[12.5px] rounded-lg px-3 py-2.5 bg-[var(--bg-sunken)]">
+          <strong>Não tem e-mail da UTFPR?</strong>
+          <span className="text-[var(--text-muted)]">
+            {" "}
+            Atleta externa entra pelo <strong className="text-[var(--text)]">link de acesso</strong>{" "}
+            que o técnico manda — é só abrir o link, sem conta Google.
+          </span>
+        </div>
+        <p className="text-[11px] text-[var(--text-muted)] mt-4">Acesso liberado pelo técnico.</p>
       </div>
     </div>
   );

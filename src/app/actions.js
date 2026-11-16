@@ -104,29 +104,54 @@ export async function entrarComLink(token) {
 }
 
 // ---------- atletas ----------
-export async function addAthlete(formData) {
-  await requireCoach();
-  const nome = String(formData.get("nome") || "").trim();
-  // Sem e-mail = atleta externa: entra por link de acesso (veja /acessos).
-  const email = String(formData.get("email") || "").trim().toLowerCase() || null;
-  if (!nome) throw new Error("O nome é obrigatório.");
-
-  await query(
-    `insert into people (nome, email, role, categoria, curso, posicao, status)
-     values ($1, $2, 'athlete', $3, $4, $5, $6)`,
-    [
-      nome,
-      email,
-      formData.get("categoria") || "F",
-      String(formData.get("curso") || "").trim(),
-      String(formData.get("posicao") || "").trim(),
-      formData.get("status") || "ativo",
-    ]
-  );
-  revalidatePath("/atletas");
-}
-
 const STATUS = ["ativo", "observacao", "lesionado", "afastado"];
+
+// Assinatura de useActionState. Atleta sem e-mail é externa (não tem conta
+// UTFPR): quando quem cadastra é o técnico, o link de acesso sem prazo já é
+// criado junto e volta aqui para ser copiado — sem passo extra em /acessos.
+export async function addAthlete(_prev, formData) {
+  const user = await requireCoach();
+  const nome = String(formData.get("nome") || "").trim();
+  const email = String(formData.get("email") || "").trim().toLowerCase() || null;
+  if (!nome) return { erro: "O nome é obrigatório." };
+  const categoria = String(formData.get("categoria") || "F");
+  if (!["F", "M"].includes(categoria)) return { erro: "Equipe inválida." };
+
+  let id;
+  try {
+    const { rows } = await query(
+      `insert into people (nome, email, role, categoria, curso, posicao, status)
+       values ($1, $2, 'athlete', $3, $4, $5, $6)
+       returning id`,
+      [
+        nome,
+        email,
+        categoria,
+        String(formData.get("curso") || "").trim(),
+        String(formData.get("posicao") || "").trim(),
+        STATUS.includes(formData.get("status")) ? formData.get("status") : "ativo",
+      ]
+    );
+    id = rows[0].id;
+  } catch (e) {
+    if (e.code === "23505") return { erro: "Já existe alguém cadastrado com esse e-mail." };
+    throw e;
+  }
+  revalidatePath("/atletas");
+
+  if (email) return { ok: true, nome };
+  if (user.role !== "admin") {
+    return { ok: true, nome, aviso: "Atleta externa cadastrada. Peça ao técnico o link de acesso dela." };
+  }
+
+  const token = novoToken();
+  await query(
+    `insert into access_links (nome, token_hash, person_id, expira_em) values ($1, $2, $3, null)`,
+    [nome, hashToken(token), id]
+  );
+  revalidatePath("/acessos");
+  return { ok: true, nome, token };
+}
 
 // "afastado" tira a atleta do lançamento de séries, do acompanhamento, do
 // ranking e da conta das metas da equipe — é o jeito de marcar quem não está
