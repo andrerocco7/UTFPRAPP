@@ -50,7 +50,11 @@ export default async function MyProfilePage() {
         </div>
       </div>
 
-      <ShootingHistory personId={user.personId} analiseHref="/minha-ficha/analise" />
+      <ShootingHistory
+        personId={user.personId}
+        analiseHref="/minha-ficha/analise"
+        historicoHref="/arremessos?aba=historico"
+      />
 
       <h2 className="text-[13px] uppercase tracking-wide text-[var(--text-muted)] font-display font-semibold mb-3">
         Notas do técnico

@@ -5,6 +5,7 @@ import { query } from "@/lib/db";
 import CourtChart from "@/components/CourtChart";
 import ShootingOverview, { PERIODOS_ACOMPANHAMENTO } from "@/components/ShootingOverview";
 import ShootingDrills from "@/components/ShootingDrills";
+import ShootingLog from "@/components/ShootingLog";
 
 const DICA_REPETIR =
   "Pode tocar no mesmo ponto de novo quantas vezes quiser — cada toque soma uma série nova, não substitui a anterior.";
@@ -24,6 +25,7 @@ export default async function ShootingPage({ searchParams }) {
       ]
     : [
         ["lancar", "Lançar séries"],
+        ["historico", "Meu histórico"],
         ["exercicios", "Exercícios"],
       ];
   const aba = abas.some(([a]) => a === params.aba) ? params.aba : abas[0][0];
@@ -47,7 +49,19 @@ export default async function ShootingPage({ searchParams }) {
         ))}
       </div>
 
-      {aba === "exercicios" ? (
+      {aba === "historico" ? (
+        <>
+          <p className="text-[13px] text-[var(--text-muted)] mb-5">
+            Cada treino que você registrou, com as séries de cada ponto. Para ver o aproveitamento
+            por ponto e a evolução, abra a{" "}
+            <Link href="/minha-ficha/analise" className="text-[var(--accent)] underline underline-offset-2">
+              análise completa
+            </Link>
+            .
+          </p>
+          <ShootingLog personId={user.personId} />
+        </>
+      ) : aba === "exercicios" ? (
         <ShootingDrills isAdmin={isAdmin} categoria={user.categoria} />
       ) : aba === "acompanhar" ? (
         <>
