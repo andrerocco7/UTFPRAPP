@@ -8,6 +8,7 @@ import { query } from "@/lib/db";
 import { SPOT_IDS } from "@/lib/spots";
 import { parseBRLToCents } from "@/lib/money";
 import { isCoach } from "@/lib/roles";
+import { DIAS_ATRASO } from "@/lib/arremessos";
 import { novoToken, hashToken } from "@/lib/accessLinks";
 
 // Só o técnico: coordenação do financeiro, notas individuais, links de acesso.
@@ -390,15 +391,32 @@ export async function deleteShootingDrill(drillId) {
 
 // Uma sessao por dia e categoria — reabrir a pagina no mesmo treino
 // continua lancando na mesma sessao em vez de criar outra.
-async function sessionDoDia(categoria) {
+async function sessionDoDia(categoria, data) {
   const { rows } = await query(
     `insert into shooting_sessions (data, categoria)
-     values (current_date, $1)
+     values ($2::date, $1)
      on conflict (data, categoria) do update set categoria = excluded.categoria
      returning id`,
-    [categoria]
+    [categoria, data]
   );
   return rows[0].id;
+}
+
+// Data do treino vinda do formulário: vazia = hoje; nunca no futuro nem
+// mais antiga que o limite do papel.
+async function dataDoTreino(user, valor) {
+  const limite = isCoach(user) ? DIAS_ATRASO.tecnico : DIAS_ATRASO.atleta;
+  const v = String(valor || "").trim();
+  const { rows } = await query(
+    `select to_char(d, 'YYYY-MM-DD') as data,
+            d <= current_date and d >= current_date - $2::int as ok
+     from (select coalesce($1::date, current_date) as d) x`,
+    [/^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null, limite]
+  );
+  if (!rows[0].ok) {
+    throw new Error(`Data do treino inválida: dá para lançar até ${limite} dias atrás, nunca no futuro.`);
+  }
+  return rows[0].data;
 }
 
 // O tecnico lanca serie para qualquer atleta; a atleta so para si mesma —
@@ -428,7 +446,8 @@ export async function addShootingSet(formData) {
     throw new Error("Numero de acertos invalido.");
   }
 
-  const sessionId = await sessionDoDia(categoria);
+  const data = await dataDoTreino(user, formData.get("data"));
+  const sessionId = await sessionDoDia(categoria, data);
   await query(
     `insert into shooting_sets (session_id, person_id, spot, tentativas, acertos)
      values ($1, $2, $3, $4, $5)`,
@@ -437,6 +456,8 @@ export async function addShootingSet(formData) {
 
   revalidatePath("/arremessos");
   revalidatePath("/minha-ficha");
+  revalidatePath("/metas");
+  revalidatePath("/");
 }
 
 export async function deleteShootingSet(setId) {

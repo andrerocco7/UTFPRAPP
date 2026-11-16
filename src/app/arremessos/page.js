@@ -6,6 +6,7 @@ import CourtChart from "@/components/CourtChart";
 import ShootingOverview, { PERIODOS_ACOMPANHAMENTO } from "@/components/ShootingOverview";
 import ShootingDrills from "@/components/ShootingDrills";
 import ShootingLog from "@/components/ShootingLog";
+import { DIAS_ATRASO } from "@/lib/arremessos";
 
 const DICA_REPETIR =
   "Pode tocar no mesmo ponto de novo quantas vezes quiser — cada toque soma uma série nova, não substitui a anterior.";
@@ -75,13 +76,25 @@ export default async function ShootingPage({ searchParams }) {
           />
         </>
       ) : (
-        <Lancar user={user} isAdmin={isAdmin} />
+        <Lancar user={user} isAdmin={isAdmin} dataPedida={params.data} />
       )}
     </div>
   );
 }
 
-async function Lancar({ user, isAdmin }) {
+async function Lancar({ user, isAdmin, dataPedida }) {
+  // Data do treino: hoje, ou um dia passado dentro do limite do papel — para
+  // lançar treino atrasado. A mesma regra é conferida de novo no servidor.
+  const limite = isAdmin ? DIAS_ATRASO.tecnico : DIAS_ATRASO.atleta;
+  const { rows: datas } = await query(
+    `select to_char(current_date, 'YYYY-MM-DD') as hoje,
+            to_char(current_date - $2::int, 'YYYY-MM-DD') as minima,
+            to_char(case when $1::date between current_date - $2::int and current_date
+                         then $1::date else current_date end, 'YYYY-MM-DD') as data`,
+    [/^\d{4}-\d{2}-\d{2}$/.test(dataPedida || "") ? dataPedida : null, limite]
+  );
+  const { hoje, minima, data } = datas[0];
+
   // Técnico lança para qualquer atleta ativa; a atleta só para si mesma.
   const { rows: atletas } = isAdmin
     ? await query(
@@ -95,16 +108,16 @@ async function Lancar({ user, isAdmin }) {
         [user.personId]
       );
 
-  // Só as séries de hoje — o histórico completo vive na ficha do atleta.
+  // Só as séries do dia escolhido — o histórico completo vive na ficha.
   const { rows: sets } = await query(
     `select st.id, st.person_id, st.spot, st.tentativas, st.acertos, p.nome
      from shooting_sets st
      join shooting_sessions ss on ss.id = st.session_id
      join people p on p.id = st.person_id
-     where ss.data = current_date
+     where ss.data = $2::date
        and ($1::int is null or st.person_id = $1)
      order by st.criado_em desc`,
-    [isAdmin ? null : user.personId]
+    [isAdmin ? null : user.personId, data]
   );
 
   return (
@@ -120,6 +133,9 @@ async function Lancar({ user, isAdmin }) {
         sets={sets}
         isAdmin={isAdmin}
         categoriaInicial={isAdmin ? "M" : atletas[0]?.categoria}
+        data={data}
+        hoje={hoje}
+        dataMinima={minima}
       />
     </>
   );

@@ -7,7 +7,9 @@ import { createAccessLink } from "@/app/actions";
 export default function NewAccessLinkForm({ atletas = [], atletaInicial = null }) {
   const [estado, action, pendente] = useActionState(createAccessLink, null);
   const [copiado, setCopiado] = useState(false);
-  const [tipo, setTipo] = useState(atletaInicial ? "atleta" : "staff");
+  // Atleta é o padrão: link de comissão dá poderes de técnico e foi criado
+  // por engano para atleta — tem que ser escolha explícita.
+  const [tipo, setTipo] = useState("atleta");
 
   const url = estado?.token ? `${window.location.origin}/entrar/${estado.token}` : null;
   // Externas primeiro: são quem mais precisa de link (não têm e-mail UTFPR).
@@ -34,8 +36,8 @@ export default function NewAccessLinkForm({ atletas = [], atletaInicial = null }
       >
         <div className="flex gap-1.5 flex-wrap">
           {[
+            ["atleta", "Atleta"],
             ["staff", "Comissão técnica"],
-            ["atleta", "Atleta externa"],
           ].map(([v, l]) => (
             <button
               key={v}
@@ -49,11 +51,18 @@ export default function NewAccessLinkForm({ atletas = [], atletaInicial = null }
         </div>
         <input type="hidden" name="tipo" value={tipo} />
 
-        <p className="text-[12px] text-[var(--text-muted)]">
-          {tipo === "staff"
-            ? "Entra como técnico: cadastra, lança séries e edita treinos, sem ver e-mails, notas e Financeiro."
-            : "Entra como a atleta escolhida: Minha ficha, lança os próprios arremessos, metas e ranking. Para quem treina com o time e não tem e-mail da UTFPR."}
-        </p>
+        {tipo === "staff" ? (
+          <p className="text-[12px] rounded-lg px-3 py-2 bg-[var(--danger-soft)] text-[var(--danger)]">
+            Dá <strong>poderes de técnico</strong>: cadastra e remove atletas, lança séries de
+            qualquer uma, edita treinos — sem ver e-mails, notas e Financeiro. Só para quem é da
+            comissão técnica. Para atleta, use <strong>Atleta</strong>.
+          </p>
+        ) : (
+          <p className="text-[12px] text-[var(--text-muted)]">
+            Entra como a atleta escolhida: Minha ficha, lança os próprios arremessos, metas e
+            ranking. Para quem não tem e-mail da UTFPR — quem tem pode entrar pelo Google.
+          </p>
+        )}
 
         <div className="grid md:grid-cols-[1fr_auto_auto] gap-3 items-end">
           {tipo === "staff" ? (

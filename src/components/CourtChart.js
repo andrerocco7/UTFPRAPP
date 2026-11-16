@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { SPOTS, SERIES_SIZES, spotLabel } from "@/lib/spots";
 import { addShootingSet, deleteShootingSet } from "@/app/actions";
 
@@ -27,7 +28,21 @@ function cores(p) {
 
 // isAdmin: o técnico escolhe equipe e atleta. A atleta recebe só ela mesma
 // em `atletas` e não vê os seletores.
-export default function CourtChart({ atletas, sets, isAdmin = true, categoriaInicial = "M" }) {
+// data/hoje/dataMinima: 'YYYY-MM-DD'. Escolher outra data recarrega a página
+// com ?data=, e as séries passam a ser lançadas naquele dia (treino atrasado).
+export default function CourtChart({
+  atletas,
+  sets,
+  isAdmin = true,
+  categoriaInicial = "M",
+  data,
+  hoje,
+  dataMinima,
+}) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const atrasado = data && hoje && data !== hoje;
   const [categoria, setCategoria] = useState(categoriaInicial || "M");
   const [personId, setPersonId] = useState(null);
   const [spot, setSpot] = useState(null);
@@ -75,6 +90,7 @@ export default function CourtChart({ atletas, sets, isAdmin = true, categoriaIni
     fd.set("spot", spot);
     fd.set("tentativas", String(serie));
     fd.set("acertos", String(acertos));
+    if (data) fd.set("data", data);
     setErro(null);
     // addShootingSet é chamado direto (sem <form>), então se ele rejeitar sem
     // try/catch o erro fica silencioso: o botão trava em "pendente" e o toque
@@ -123,8 +139,52 @@ export default function CourtChart({ atletas, sets, isAdmin = true, categoriaIni
 
   const dadosSpot = spot ? porSpot[spot] : null;
 
+  function trocarData(nova) {
+    const p = new URLSearchParams(searchParams.toString());
+    p.set("aba", "lancar");
+    if (!nova || nova === hoje) p.delete("data");
+    else p.set("data", nova);
+    setSpot(null);
+    router.replace(`${pathname}?${p.toString()}`, { scroll: false });
+  }
+
+  const fmtData = (iso) => iso.split("-").reverse().slice(0, 2).join("/");
+
   return (
     <div className="flex flex-col gap-4">
+      {/* data do treino */}
+      {data && (
+        <div
+          className={`card p-3 flex items-center gap-3 flex-wrap ${
+            atrasado ? "border-[var(--warn)]" : ""
+          }`}
+        >
+          <label className="flex items-center gap-2 text-[12.5px] font-semibold">
+            Data do treino
+            <input
+              type="date"
+              value={data}
+              min={dataMinima}
+              max={hoje}
+              onChange={(e) => trocarData(e.target.value)}
+              className="!w-auto !py-1 text-[13px]"
+            />
+          </label>
+          {atrasado ? (
+            <span className="text-[12px] text-[var(--warn)] flex-1 min-w-[180px]">
+              Lançando o treino atrasado de <strong>{fmtData(data)}</strong> — as séries entram nesse
+              dia (e na semana dele, nas metas).{" "}
+              <button type="button" onClick={() => trocarData(hoje)} className="underline">
+                Voltar para hoje
+              </button>
+            </span>
+          ) : (
+            <span className="text-[11.5px] text-[var(--text-muted)]">
+              Treinou outro dia e não lançou? Escolha a data.
+            </span>
+          )}
+        </div>
+      )}
       {/* categoria + atleta (só o técnico escolhe) */}
       {isAdmin && (
       <div className="card p-3 flex flex-col gap-3">
@@ -301,8 +361,8 @@ export default function CourtChart({ atletas, sets, isAdmin = true, categoriaIni
               <div className="flex flex-col gap-1.5 pt-1 border-t border-[var(--border)]">
                 <div className="text-[11px] uppercase tracking-wide text-[var(--text-muted)] pt-2">
                   {seriesDoSpot.length === 1
-                    ? "1 série lançada aqui hoje"
-                    : `${seriesDoSpot.length} séries lançadas aqui hoje`}
+                    ? `1 série lançada aqui ${atrasado ? `em ${fmtData(data)}` : "hoje"}`
+                    : `${seriesDoSpot.length} séries lançadas aqui ${atrasado ? `em ${fmtData(data)}` : "hoje"}`}
                 </div>
                 <div className="flex flex-wrap gap-1.5">
                   {seriesDoSpot.map((s, i) => (
@@ -348,7 +408,7 @@ export default function CourtChart({ atletas, sets, isAdmin = true, categoriaIni
       {/* séries do treino */}
       <div className="card overflow-hidden">
         <div className="text-[10.5px] uppercase tracking-wide text-[var(--text-muted)] px-3 pt-3 pb-2">
-          {isAdmin ? "Séries deste treino" : "Suas séries de hoje"}
+          {isAdmin ? "Séries deste treino" : atrasado ? `Suas séries de ${fmtData(data)}` : "Suas séries de hoje"}
         </div>
         {!sets.length ? (
           <div className="px-3 pb-3 text-[13px] italic text-[var(--text-muted)]">
